@@ -1,6 +1,7 @@
 """Application configuration settings."""
-from typing import Optional, List
-from pydantic_settings import BaseSettings
+import json
+from typing import Optional, List, Union
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
 
@@ -21,8 +22,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours
 
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # CORS - stored as comma-separated string in .env
+    CORS_ORIGINS: Union[List[str], str] = "http://localhost:3000,http://localhost:5173"
 
     # File uploads
     UPLOAD_DIR: str = "uploads"
@@ -55,14 +56,23 @@ class Settings(BaseSettings):
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):
+        """Parse CORS origins from string or list."""
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
+            # Try JSON first (for array format)
+            if v.startswith("["):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # Otherwise split by comma
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
 
 settings = Settings()
