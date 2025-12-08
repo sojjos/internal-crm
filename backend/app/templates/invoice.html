@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture {{ invoice.invoice_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+        }
+
+        .invoice-container {
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #2563eb;
+        }
+
+        .company-info {
+            max-width: 50%;
+        }
+
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+
+        .company-details {
+            font-size: 9pt;
+            color: #666;
+        }
+
+        .invoice-title {
+            text-align: right;
+        }
+
+        .invoice-title h1 {
+            font-size: 24pt;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+
+        .invoice-number {
+            font-size: 12pt;
+            font-weight: bold;
+        }
+
+        /* Addresses */
+        .addresses {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .address-block {
+            width: 45%;
+        }
+
+        .address-label {
+            font-size: 8pt;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .address-content {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .address-name {
+            font-weight: bold;
+            font-size: 11pt;
+            margin-bottom: 5px;
+        }
+
+        /* Invoice details */
+        .invoice-details {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+        }
+
+        .details-table {
+            border-collapse: collapse;
+        }
+
+        .details-table td {
+            padding: 5px 15px;
+            font-size: 9pt;
+        }
+
+        .details-table td:first-child {
+            color: #666;
+            text-align: right;
+        }
+
+        .details-table td:last-child {
+            font-weight: bold;
+        }
+
+        /* Line items */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .items-table th {
+            background: #2563eb;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+
+        .items-table th:last-child,
+        .items-table td:last-child {
+            text-align: right;
+        }
+
+        .items-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+
+        .items-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .item-description {
+            font-weight: 500;
+        }
+
+        /* Totals */
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 30px;
+        }
+
+        .totals-table {
+            width: 300px;
+            border-collapse: collapse;
+        }
+
+        .totals-table td {
+            padding: 8px 15px;
+            font-size: 10pt;
+        }
+
+        .totals-table td:first-child {
+            text-align: right;
+            color: #666;
+        }
+
+        .totals-table td:last-child {
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .totals-table .total-row {
+            background: #2563eb;
+            color: white;
+        }
+
+        .totals-table .total-row td {
+            font-size: 12pt;
+            font-weight: bold;
+            padding: 12px 15px;
+        }
+
+        /* Payment info */
+        .payment-info {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .payment-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2563eb;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+        }
+
+        .legal-mentions {
+            margin-top: 10px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="company-info">
+                {% if company.logo_path %}
+                <img src="{{ company.logo_path }}" alt="Logo" style="max-height: 60px; margin-bottom: 10px;">
+                {% endif %}
+                <div class="company-name">{{ company.company_name }}</div>
+                <div class="company-details">
+                    {% if company.address_street %}{{ company.address_street }}<br>{% endif %}
+                    {% if company.address_postal_code or company.address_city %}
+                    {{ company.address_postal_code }} {{ company.address_city }}<br>
+                    {% endif %}
+                    {% if company.vat_number %}TVA: {{ company.vat_number }}<br>{% endif %}
+                    {% if company.phone %}Tél: {{ company.phone }}<br>{% endif %}
+                    {% if company.email %}{{ company.email }}{% endif %}
+                </div>
+            </div>
+            <div class="invoice-title">
+                <h1>FACTURE</h1>
+                <div class="invoice-number">N° {{ invoice.invoice_number }}</div>
+            </div>
+        </div>
+
+        <!-- Addresses -->
+        <div class="addresses">
+            <div class="address-block">
+                <div class="address-label">Facturer à</div>
+                <div class="address-content">
+                    <div class="address-name">{{ client.name }}</div>
+                    {% if client.contact_name %}{{ client.contact_name }}<br>{% endif %}
+                    {% if client.address_street %}{{ client.address_street }}<br>{% endif %}
+                    {% if client.address_postal_code or client.address_city %}
+                    {{ client.address_postal_code }} {{ client.address_city }}<br>
+                    {% endif %}
+                    {% if client.vat_number %}TVA: {{ client.vat_number }}{% endif %}
+                </div>
+            </div>
+            <div class="address-block">
+                <div class="invoice-details">
+                    <table class="details-table">
+                        <tr>
+                            <td>Date de facture:</td>
+                            <td>{{ invoice.invoice_date.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                        <tr>
+                            <td>Date d'échéance:</td>
+                            <td>{{ invoice.due_date.strftime('%d/%m/%Y') }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line items -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 40%">Description</th>
+                    <th style="width: 10%">Qté</th>
+                    <th style="width: 10%">Unité</th>
+                    <th style="width: 15%">Prix unit. HTVA</th>
+                    <th style="width: 10%">TVA %</th>
+                    <th style="width: 15%">Total HTVA</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td class="item-description">{{ line.description }}</td>
+                    <td>{{ "%.2f"|format(line.quantity) }}</td>
+                    <td>{{ line.unit }}</td>
+                    <td>{{ "%.2f"|format(line.unit_price) }} €</td>
+                    <td>{{ "%.0f"|format(line.vat_rate) }}%</td>
+                    <td>{{ "%.2f"|format(line.line_total_htva) }} €</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td>Total HTVA:</td>
+                    <td>{{ "%.2f"|format(invoice.total_htva) }} €</td>
+                </tr>
+                <tr>
+                    <td>TVA:</td>
+                    <td>{{ "%.2f"|format(invoice.total_vat) }} €</td>
+                </tr>
+                <tr class="total-row">
+                    <td>TOTAL TVAC:</td>
+                    <td>{{ "%.2f"|format(invoice.total_tvac) }} €</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Payment information -->
+        <div class="payment-info">
+            <div class="payment-title">Informations de paiement</div>
+            <p>Merci de régler cette facture avant le <strong>{{ invoice.due_date.strftime('%d/%m/%Y') }}</strong>.</p>
+            {% if invoice.paypal_payment_link %}
+            <p style="margin-top: 10px;">
+                <strong>Paiement en ligne:</strong> {{ invoice.paypal_payment_link }}
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- Notes -->
+        {% if invoice.footer_notes %}
+        <div style="margin-bottom: 20px;">
+            <strong>Notes:</strong><br>
+            {{ invoice.footer_notes }}
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <div>{{ company.company_name }} - {{ company.address_street }}, {{ company.address_postal_code }} {{ company.address_city }}</div>
+            <div>TVA: {{ company.vat_number }} {% if company.email %}- {{ company.email }}{% endif %} {% if company.phone %}- {{ company.phone }}{% endif %}</div>
+            {% if company.legal_mentions %}
+            <div class="legal-mentions">{{ company.legal_mentions }}</div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

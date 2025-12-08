@@ -1,0 +1,79 @@
+"""PDF generation service for invoices."""
+import os
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from jinja2 import Environment, FileSystemLoader
+from weasyprint import HTML
+
+from app.core.config import settings
+
+if TYPE_CHECKING:
+    from app.models.invoice import Invoice
+    from app.models.company import CompanySettings
+
+
+# Get template directory
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
+
+
+def generate_invoice_pdf(invoice: "Invoice", company: "CompanySettings") -> str:
+    """Generate PDF for an invoice.
+
+    Args:
+        invoice: Invoice model with lines and client loaded
+        company: Company settings
+
+    Returns:
+        Path to generated PDF file
+    """
+    # Setup Jinja2 environment
+    env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+    template = env.get_template("invoice.html")
+
+    # Prepare template context
+    context = {
+        "invoice": invoice,
+        "company": company,
+        "client": invoice.client,
+        "lines": invoice.lines,
+        "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+    }
+
+    # Render HTML
+    html_content = template.render(**context)
+
+    # Create output directory
+    output_dir = os.path.join(settings.UPLOAD_DIR, "invoices")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Generate PDF
+    filename = f"invoice_{invoice.invoice_number.replace('/', '-')}.pdf"
+    filepath = os.path.join(output_dir, filename)
+
+    HTML(string=html_content).write_pdf(filepath)
+
+    return filepath
+
+
+def generate_invoice_html(invoice: "Invoice", company: "CompanySettings") -> str:
+    """Generate HTML content for an invoice (for email body).
+
+    Args:
+        invoice: Invoice model with lines and client loaded
+        company: Company settings
+
+    Returns:
+        HTML content string
+    """
+    env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+    template = env.get_template("invoice_email.html")
+
+    context = {
+        "invoice": invoice,
+        "company": company,
+        "client": invoice.client,
+        "lines": invoice.lines,
+    }
+
+    return template.render(**context)
