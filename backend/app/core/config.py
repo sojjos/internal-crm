@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     SECRET_KEY: str = "change-this-secret-key-in-production"
+    SITE_URL: str = "http://localhost"
 
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/sme_management"
@@ -72,6 +73,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",  # Ignore unknown environment variables
     )
 
 
