@@ -21,6 +21,9 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Users from './pages/Users'
 import UserForm from './pages/UserForm'
+import Emails from './pages/Emails'
+import EmailCompose from './pages/EmailCompose'
+import EmailSettings from './pages/EmailSettings'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -99,6 +102,11 @@ export default function App() {
         <Route path="users" element={<Users />} />
         <Route path="users/new" element={<UserForm />} />
         <Route path="users/:id" element={<UserForm />} />
+
+        {/* Emails */}
+        <Route path="emails" element={<Emails />} />
+        <Route path="emails/compose" element={<EmailCompose />} />
+        <Route path="emails/settings" element={<EmailSettings />} />
       </Route>
 
       {/* Catch all */}

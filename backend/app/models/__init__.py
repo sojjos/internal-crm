@@ -7,6 +7,7 @@ from app.models.article import Article
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.expense import Expense, ExpenseType
 from app.models.collaborator import Collaborator, PayrollPeriod, Payslip
+from app.models.email import EmailAccount, Email, EmailTemplate
 
 __all__ = [
     "User",
@@ -21,4 +22,7 @@ __all__ = [
     "Collaborator",
     "PayrollPeriod",
     "Payslip",
+    "EmailAccount",
+    "Email",
+    "EmailTemplate",
 ]

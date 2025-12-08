@@ -17,6 +17,11 @@ from app.schemas.collaborator import (
     PayrollPeriodCreate, PayrollPeriodResponse,
     PayslipCreate, PayslipResponse
 )
+from app.schemas.email import (
+    EmailAccountCreate, EmailAccountUpdate, EmailAccountResponse,
+    EmailCompose, EmailResponse, EmailDetail, EmailListResponse,
+    EmailTemplateCreate, EmailTemplateUpdate, EmailTemplateResponse,
+)
 
 __all__ = [
     "UserCreate", "UserUpdate", "UserResponse", "UserLogin", "Token",
@@ -31,4 +36,7 @@ __all__ = [
     "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorResponse",
     "PayrollPeriodCreate", "PayrollPeriodResponse",
     "PayslipCreate", "PayslipResponse",
+    "EmailAccountCreate", "EmailAccountUpdate", "EmailAccountResponse",
+    "EmailCompose", "EmailResponse", "EmailDetail", "EmailListResponse",
+    "EmailTemplateCreate", "EmailTemplateUpdate", "EmailTemplateResponse",
 ]

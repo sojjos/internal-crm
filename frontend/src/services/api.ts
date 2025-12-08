@@ -162,3 +162,35 @@ export const usersApi = {
   update: (id: number, data: any) => api.put(`/users/${id}`, data),
   delete: (id: number) => api.delete(`/users/${id}`),
 }
+
+export const emailsApi = {
+  // Accounts
+  accounts: {
+    list: () => api.get('/emails/accounts'),
+    get: (id: number) => api.get(`/emails/accounts/${id}`),
+    create: (data: any) => api.post('/emails/accounts', data),
+    update: (id: number, data: any) => api.put(`/emails/accounts/${id}`, data),
+    delete: (id: number) => api.delete(`/emails/accounts/${id}`),
+    test: (data: any) => api.post('/emails/accounts/test', data),
+  },
+  // Emails
+  list: (params?: any) => api.get('/emails', { params }),
+  get: (id: number) => api.get(`/emails/${id}`),
+  send: (data: FormData) => api.post('/emails/send', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  markRead: (id: number, isRead: boolean = true) =>
+    api.post(`/emails/${id}/mark-read`, null, { params: { is_read: isRead } }),
+  star: (id: number) => api.post(`/emails/${id}/star`),
+  delete: (id: number) => api.delete(`/emails/${id}`),
+  sync: (accountId: number, folder: string = 'INBOX') =>
+    api.post('/emails/sync', { account_id: accountId, folder }),
+  folders: (accountId: number) => api.get('/emails/folders', { params: { account_id: accountId } }),
+  // Templates
+  templates: {
+    list: (templateType?: string) => api.get('/emails/templates', { params: { template_type: templateType } }),
+    create: (data: any) => api.post('/emails/templates', data),
+    update: (id: number, data: any) => api.put(`/emails/templates/${id}`, data),
+    delete: (id: number) => api.delete(`/emails/templates/${id}`),
+  },
+}

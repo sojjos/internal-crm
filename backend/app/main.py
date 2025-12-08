@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.db.database import Base, engine
 from app.api.routes import (
     auth, users, company, clients, suppliers,
-    articles, invoices, expenses, collaborators, reports, peppol
+    articles, invoices, expenses, collaborators, reports, peppol, emails
 )
 
 
@@ -67,6 +67,7 @@ app.include_router(expenses.router, prefix="/api/expenses", tags=["Expenses"])
 app.include_router(collaborators.router, prefix="/api/collaborators", tags=["Collaborators & Payroll"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports & Exports"])
 app.include_router(peppol.router, prefix="/api/peppol", tags=["Peppol Directory"])
+app.include_router(emails.router, prefix="/api/emails", tags=["Email Client"])
 
 
 @app.get("/api/health")

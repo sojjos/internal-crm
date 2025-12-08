@@ -1,6 +1,7 @@
 """User model - All users are managers (gérants)."""
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
+from sqlalchemy.orm import relationship
 
 from app.db.database import Base
 
@@ -24,6 +25,9 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
+
+    # Relationships
+    email_accounts = relationship("EmailAccount", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def full_name(self) -> str:

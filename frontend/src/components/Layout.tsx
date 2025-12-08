@@ -15,10 +15,12 @@ import {
   ArrowRightOnRectangleIcon,
   ShoppingBagIcon,
   CubeIcon,
+  EnvelopeIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
   { name: 'Tableau de bord', href: '/', icon: HomeIcon },
+  { name: 'Messagerie', href: '/emails', icon: EnvelopeIcon },
   { name: 'Clients', href: '/clients', icon: UsersIcon },
   { name: 'Fournisseurs', href: '/suppliers', icon: BuildingOfficeIcon },
   { name: 'Articles', href: '/articles', icon: CubeIcon },
