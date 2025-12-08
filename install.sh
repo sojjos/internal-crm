@@ -2,6 +2,7 @@
 
 # SME Management Application - Installation Script
 # This script installs and configures the application on a Linux server
+# With HTTPS support via Let's Encrypt
 
 set -e
 
@@ -18,7 +19,10 @@ APP_DIR="/opt/${APP_NAME}"
 DB_NAME="sme_management"
 DB_USER="sme_user"
 BACKEND_PORT=8000
-FRONTEND_PORT=80
+
+# Server configuration
+SERVER_IP="109.199.101.5"
+DOMAIN_NAME=""  # Will be set during installation or use IP
 
 # Print colored message
 print_msg() {
@@ -43,10 +47,19 @@ check_root() {
 
 # Parse arguments
 UPDATE_MODE=false
+SKIP_SSL=false
 for arg in "$@"; do
     case $arg in
         --update)
             UPDATE_MODE=true
+            shift
+            ;;
+        --skip-ssl)
+            SKIP_SSL=true
+            shift
+            ;;
+        --domain=*)
+            DOMAIN_NAME="${arg#*=}"
             shift
             ;;
     esac
@@ -90,7 +103,9 @@ install_dependencies() {
             libpangocairo-1.0-0 \
             libgdk-pixbuf2.0-0 \
             libffi-dev \
-            shared-mime-info
+            shared-mime-info \
+            certbot \
+            python3-certbot-nginx
 
         # Install Node.js 20.x if older version
         NODE_VERSION=$(node -v 2>/dev/null | cut -d'.' -f1 | tr -d 'v' || echo "0")
@@ -101,6 +116,7 @@ install_dependencies() {
 
     elif [ "$OS" = "redhat" ]; then
         yum update -y
+        yum install -y epel-release
         yum install -y \
             python3 \
             python3-pip \
@@ -114,7 +130,9 @@ install_dependencies() {
             gcc \
             postgresql-devel \
             pango \
-            libffi-devel
+            libffi-devel \
+            certbot \
+            python3-certbot-nginx
 
         # Initialize PostgreSQL on RHEL
         postgresql-setup --initdb || true
@@ -187,6 +205,20 @@ setup_backend() {
     pip install --upgrade pip
     pip install -r requirements.txt
 
+    # Determine URL scheme and origins
+    if [ -n "$DOMAIN_NAME" ]; then
+        SITE_URL="https://${DOMAIN_NAME}"
+        CORS_ORIGINS="https://${DOMAIN_NAME},https://www.${DOMAIN_NAME}"
+    else
+        if [ "$SKIP_SSL" = true ]; then
+            SITE_URL="http://${SERVER_IP}"
+            CORS_ORIGINS="http://${SERVER_IP},http://localhost"
+        else
+            SITE_URL="https://${SERVER_IP}"
+            CORS_ORIGINS="https://${SERVER_IP},http://${SERVER_IP},http://localhost"
+        fi
+    fi
+
     # Create .env file
     if [ ! -f .env ] || [ "$UPDATE_MODE" = false ]; then
         SECRET_KEY=$(openssl rand -base64 32)
@@ -207,7 +239,7 @@ JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=480
 
 # CORS
-CORS_ORIGINS=http://localhost,http://127.0.0.1
+CORS_ORIGINS=${CORS_ORIGINS}
 
 # File uploads
 UPLOAD_DIR=${APP_DIR}/uploads
@@ -217,6 +249,9 @@ MAX_UPLOAD_SIZE=10485760
 DEFAULT_CURRENCY=EUR
 DEFAULT_VAT_RATE=21.0
 DEFAULT_PAYMENT_TERMS=30
+
+# Server
+SITE_URL=${SITE_URL}
 EOF
     fi
 
@@ -279,15 +314,22 @@ EOF
     print_msg "Backend service created and started" $GREEN
 }
 
-# Configure Nginx
-configure_nginx() {
-    print_header "Configuring Nginx"
+# Configure Nginx without SSL (initial setup)
+configure_nginx_http() {
+    print_header "Configuring Nginx (HTTP)"
+
+    # Determine server name
+    if [ -n "$DOMAIN_NAME" ]; then
+        SERVER_NAME="$DOMAIN_NAME www.$DOMAIN_NAME"
+    else
+        SERVER_NAME="$SERVER_IP"
+    fi
 
     cat > /etc/nginx/sites-available/sme-management << EOF
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_NAME};
 
     # Frontend (static files)
     root ${APP_DIR}/frontend/dist;
@@ -334,7 +376,130 @@ EOF
     systemctl enable nginx
     systemctl restart nginx
 
-    print_msg "Nginx configured and started" $GREEN
+    print_msg "Nginx HTTP configured and started" $GREEN
+}
+
+# Configure SSL with Let's Encrypt
+configure_ssl() {
+    print_header "Configuring HTTPS with Let's Encrypt"
+
+    if [ -n "$DOMAIN_NAME" ]; then
+        # Domain-based SSL certificate
+        print_msg "Obtaining SSL certificate for ${DOMAIN_NAME}..." $YELLOW
+
+        certbot --nginx -d "$DOMAIN_NAME" -d "www.$DOMAIN_NAME" \
+            --non-interactive \
+            --agree-tos \
+            --email "admin@${DOMAIN_NAME}" \
+            --redirect
+
+        print_msg "SSL certificate obtained and configured" $GREEN
+    else
+        # IP-based self-signed certificate (Let's Encrypt doesn't support IP addresses)
+        print_msg "Creating self-signed SSL certificate for IP ${SERVER_IP}..." $YELLOW
+
+        # Create SSL directory
+        mkdir -p /etc/nginx/ssl
+
+        # Generate self-signed certificate
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout /etc/nginx/ssl/selfsigned.key \
+            -out /etc/nginx/ssl/selfsigned.crt \
+            -subj "/C=BE/ST=Brussels/L=Brussels/O=SME Management/CN=${SERVER_IP}"
+
+        # Generate DH parameters
+        if [ ! -f /etc/nginx/ssl/dhparam.pem ]; then
+            openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048
+        fi
+
+        # Configure Nginx with SSL
+        cat > /etc/nginx/sites-available/sme-management << EOF
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${SERVER_IP};
+    return 301 https://\$server_name\$request_uri;
+}
+
+# HTTPS server
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${SERVER_IP};
+
+    # SSL Configuration
+    ssl_certificate /etc/nginx/ssl/selfsigned.crt;
+    ssl_certificate_key /etc/nginx/ssl/selfsigned.key;
+    ssl_dhparam /etc/nginx/ssl/dhparam.pem;
+
+    # SSL Security settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_stapling off;
+
+    # Frontend (static files)
+    root ${APP_DIR}/frontend/dist;
+    index index.html;
+
+    # API proxy
+    location /api/ {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT}/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        client_max_body_size 10M;
+    }
+
+    # Uploads
+    location /uploads/ {
+        alias ${APP_DIR}/uploads/;
+        expires 30d;
+    }
+
+    # Frontend routing (SPA)
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+}
+EOF
+
+        # Reload Nginx
+        nginx -t
+        systemctl reload nginx
+
+        print_msg "Self-signed SSL certificate configured" $GREEN
+        print_msg "Note: Browser will show a security warning for self-signed certificates" $YELLOW
+    fi
+}
+
+# Setup automatic certificate renewal
+setup_ssl_renewal() {
+    if [ -n "$DOMAIN_NAME" ]; then
+        print_header "Setting up automatic SSL renewal"
+
+        # Create renewal cron job
+        cat > /etc/cron.d/certbot-renewal << EOF
+# Renew Let's Encrypt certificates twice daily
+0 0,12 * * * root certbot renew --quiet --post-hook "systemctl reload nginx"
+EOF
+
+        print_msg "Automatic SSL renewal configured" $GREEN
+    fi
 }
 
 # Initial setup wizard
@@ -418,7 +583,18 @@ print_completion() {
 
     echo -e "${GREEN}The SME Management application has been installed successfully!${NC}"
     echo ""
-    echo -e "Access the application at: ${BLUE}http://$(hostname -I | awk '{print $1}')${NC}"
+
+    if [ -n "$DOMAIN_NAME" ]; then
+        echo -e "Access the application at: ${BLUE}https://${DOMAIN_NAME}${NC}"
+    else
+        if [ "$SKIP_SSL" = true ]; then
+            echo -e "Access the application at: ${BLUE}http://${SERVER_IP}${NC}"
+        else
+            echo -e "Access the application at: ${BLUE}https://${SERVER_IP}${NC}"
+            echo -e "${YELLOW}Note: Accept the self-signed certificate warning in your browser${NC}"
+        fi
+    fi
+
     echo ""
     echo "Login with your admin credentials."
     echo ""
@@ -430,20 +606,34 @@ print_completion() {
     echo "5. Add your articles/services catalog"
     echo "6. Add your clients"
     echo ""
+
+    if [ -z "$DOMAIN_NAME" ] && [ "$SKIP_SSL" = false ]; then
+        echo -e "${YELLOW}For a proper SSL certificate:${NC}"
+        echo "1. Point a domain name to ${SERVER_IP}"
+        echo "2. Run: sudo ./install.sh --update --domain=yourdomain.com"
+        echo ""
+    fi
+
     echo -e "${YELLOW}Useful commands:${NC}"
     echo "  - View backend logs: journalctl -u sme-backend -f"
     echo "  - Restart backend: systemctl restart sme-backend"
     echo "  - Restart Nginx: systemctl restart nginx"
+    echo "  - Renew SSL (if domain): certbot renew"
     echo ""
-    echo "Documentation and support: https://github.com/your-repo/sme-management"
+    echo -e "${BLUE}Server IP: ${SERVER_IP}${NC}"
 }
 
 # Main installation flow
 main() {
     print_header "SME Management Application Installer"
+    print_msg "Target server: ${SERVER_IP}" $BLUE
 
     if [ "$UPDATE_MODE" = true ]; then
         print_msg "Running in UPDATE mode" $YELLOW
+    fi
+
+    if [ -n "$DOMAIN_NAME" ]; then
+        print_msg "Domain: ${DOMAIN_NAME}" $BLUE
     fi
 
     check_root
@@ -458,7 +648,12 @@ main() {
     setup_backend
     setup_frontend
     create_backend_service
-    configure_nginx
+    configure_nginx_http
+
+    if [ "$SKIP_SSL" = false ]; then
+        configure_ssl
+        setup_ssl_renewal
+    fi
 
     if [ "$UPDATE_MODE" = false ]; then
         setup_wizard
