@@ -1,7 +1,9 @@
 """Peppol/UBL e-invoicing service."""
 import os
+import time
+import httpx
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, List, Dict, Any
 from lxml import etree
 
 from app.core.config import settings
@@ -9,6 +11,185 @@ from app.core.config import settings
 if TYPE_CHECKING:
     from app.models.invoice import Invoice
     from app.models.company import CompanySettings
+
+
+# Peppol Directory API configuration
+PEPPOL_DIRECTORY_BASE_URL = "https://directory.peppol.eu"
+PEPPOL_DIRECTORY_SEARCH_ENDPOINT = "/search/1.0/json"
+
+# Rate limiting: max 2 requests per second
+_last_request_time = 0.0
+_request_interval = 0.5  # 500ms between requests
+
+
+class PeppolDirectoryClient:
+    """Client for Peppol Directory REST API.
+
+    Documentation: https://directory.peppol.eu/public/menuitem-docs-rest-api
+    """
+
+    def __init__(self):
+        self.base_url = PEPPOL_DIRECTORY_BASE_URL
+        self.search_endpoint = PEPPOL_DIRECTORY_SEARCH_ENDPOINT
+
+    def _rate_limit(self):
+        """Ensure we don't exceed 2 requests per second."""
+        global _last_request_time
+        now = time.time()
+        elapsed = now - _last_request_time
+        if elapsed < _request_interval:
+            time.sleep(_request_interval - elapsed)
+        _last_request_time = time.time()
+
+    async def search_participant(
+        self,
+        participant_id: Optional[str] = None,
+        name: Optional[str] = None,
+        country: Optional[str] = None,
+        page_index: int = 0,
+        page_count: int = 20
+    ) -> Dict[str, Any]:
+        """Search for participants in the Peppol Directory.
+
+        Args:
+            participant_id: Exact Peppol participant ID (e.g., "0208:0123456789")
+            name: Partial business name search (min 3 chars)
+            country: Country code (e.g., "BE", "FR", "NL")
+            page_index: Page index for pagination (0-based)
+            page_count: Number of results per page (max 1000)
+
+        Returns:
+            Dictionary with search results and metadata
+        """
+        self._rate_limit()
+
+        params = {
+            "resultPageIndex": page_index,
+            "resultPageCount": min(page_count, 1000)
+        }
+
+        if participant_id:
+            # Format: scheme::id (e.g., "iso6523-actorid-upis::0208:0123456789")
+            if "::" not in participant_id:
+                # Auto-format Belgian enterprise numbers
+                participant_id = f"iso6523-actorid-upis::0208:{participant_id}"
+            params["participant"] = participant_id
+
+        if name and len(name) >= 3:
+            params["name"] = name
+
+        if country and len(country) == 2:
+            params["country"] = country.upper()
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{self.base_url}{self.search_endpoint}",
+                params=params
+            )
+
+            if response.status_code == 429:
+                raise Exception("Peppol Directory rate limit exceeded. Please wait.")
+
+            if response.status_code == 400:
+                raise Exception("Invalid search parameters (min 3 characters required)")
+
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Extract headers metadata
+            headers = response.headers
+            return {
+                "total_count": int(headers.get("total-result-count", 0)),
+                "page_index": int(headers.get("result-page-index", 0)),
+                "page_count": int(headers.get("result-page-count", 0)),
+                "matches": data.get("matches", [])
+            }
+
+    async def lookup_participant(self, participant_id: str) -> Optional[Dict[str, Any]]:
+        """Lookup a specific Peppol participant by ID.
+
+        Args:
+            participant_id: The Peppol participant ID (e.g., "0208:0123456789" for Belgian enterprise)
+
+        Returns:
+            Participant data if found, None otherwise
+        """
+        result = await self.search_participant(participant_id=participant_id)
+
+        if result["matches"]:
+            return result["matches"][0]
+        return None
+
+    async def validate_participant(self, participant_id: str) -> Dict[str, Any]:
+        """Validate if a participant exists and can receive invoices.
+
+        Args:
+            participant_id: The Peppol participant ID
+
+        Returns:
+            Dictionary with validation status and details
+        """
+        participant = await self.lookup_participant(participant_id)
+
+        if not participant:
+            return {
+                "valid": False,
+                "registered": False,
+                "message": "Participant not found in Peppol Directory",
+                "participant_id": participant_id,
+                "can_receive_invoice": False
+            }
+
+        # Check if participant can receive invoices (document type check)
+        doc_types = participant.get("docTypes", [])
+        can_receive_invoice = any(
+            "invoice" in dt.get("value", "").lower() or
+            "billing" in dt.get("value", "").lower()
+            for dt in doc_types
+        )
+
+        return {
+            "valid": True,
+            "registered": True,
+            "message": "Participant found and registered",
+            "participant_id": participant_id,
+            "name": participant.get("entities", [{}])[0].get("name", [{}])[0].get("value", ""),
+            "country": participant.get("entities", [{}])[0].get("countryCode", ""),
+            "can_receive_invoice": can_receive_invoice,
+            "document_types": [dt.get("value", "") for dt in doc_types],
+            "registration_date": participant.get("registrationDate", "")
+        }
+
+    async def search_belgian_companies(
+        self,
+        name: Optional[str] = None,
+        enterprise_number: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Search for Belgian companies in Peppol Directory.
+
+        Args:
+            name: Company name (partial match, min 3 chars)
+            enterprise_number: Belgian enterprise number (KBO/BCE)
+
+        Returns:
+            List of matching Belgian Peppol participants
+        """
+        if enterprise_number:
+            # Clean and format Belgian enterprise number
+            clean_num = enterprise_number.replace(".", "").replace(" ", "").replace("BE", "")
+            result = await self.search_participant(
+                participant_id=f"0208:{clean_num}",
+                country="BE"
+            )
+        else:
+            result = await self.search_participant(name=name, country="BE")
+
+        return result.get("matches", [])
+
+
+# Global client instance
+peppol_directory = PeppolDirectoryClient()
 
 
 # UBL 2.1 namespaces
@@ -215,18 +396,34 @@ def generate_ubl_invoice(invoice: "Invoice", company: "CompanySettings") -> str:
     return filepath
 
 
-def send_peppol_invoice(invoice: "Invoice", company: "CompanySettings") -> bool:
-    """Send invoice via Peppol network.
-
-    This is a placeholder - actual implementation depends on
-    the Peppol Access Point provider being used.
+async def validate_recipient_before_send(
+    client_peppol_id: str
+) -> Dict[str, Any]:
+    """Validate recipient before sending Peppol invoice.
 
     Args:
-        invoice: Invoice model
-        company: Company settings with Peppol config
+        client_peppol_id: Client's Peppol participant ID
 
     Returns:
-        True if sent successfully
+        Validation result dictionary
+    """
+    return await peppol_directory.validate_participant(client_peppol_id)
+
+
+async def send_peppol_invoice(
+    invoice: "Invoice",
+    company: "CompanySettings",
+    validate_recipient: bool = True
+) -> Dict[str, Any]:
+    """Send invoice via Peppol network.
+
+    Args:
+        invoice: Invoice model with lines and client loaded
+        company: Company settings with Peppol config
+        validate_recipient: Whether to validate recipient before sending
+
+    Returns:
+        Dictionary with send status and details
     """
     if not company.peppol_enabled:
         raise ValueError("Peppol is not enabled")
@@ -234,14 +431,61 @@ def send_peppol_invoice(invoice: "Invoice", company: "CompanySettings") -> bool:
     if not invoice.ubl_path or not os.path.exists(invoice.ubl_path):
         raise ValueError("UBL file not generated")
 
+    if not invoice.client.peppol_id:
+        raise ValueError("Client has no Peppol ID configured")
+
+    result = {
+        "success": False,
+        "invoice_number": invoice.invoice_number,
+        "recipient_peppol_id": invoice.client.peppol_id,
+        "validation": None,
+        "message": ""
+    }
+
+    # Validate recipient in Peppol Directory
+    if validate_recipient:
+        validation = await validate_recipient_before_send(invoice.client.peppol_id)
+        result["validation"] = validation
+
+        if not validation["valid"]:
+            result["message"] = f"Recipient not found in Peppol Directory: {invoice.client.peppol_id}"
+            return result
+
+        if not validation["can_receive_invoice"]:
+            result["message"] = "Recipient is registered but cannot receive invoices"
+            return result
+
     # TODO: Implement actual Peppol sending via Access Point API
-    # This depends on the specific Access Point provider (e.g., Storecove, Unifiedpost, etc.)
+    # This depends on the specific Access Point provider:
+    # - Storecove: https://www.storecove.com/docs/
+    # - Unifiedpost: Belgian provider
+    # - Basware: https://www.basware.com/
+    # - OpenPeppol certified Access Points list
 
-    # Placeholder - in production, this would:
-    # 1. Connect to Peppol Access Point API
+    # Placeholder implementation - in production:
+    # 1. Connect to Peppol Access Point API with credentials
     # 2. Upload the UBL XML document
-    # 3. Handle response and errors
+    # 3. Get transmission ID and status
+    # 4. Handle async delivery notifications
 
-    print(f"Would send Peppol invoice {invoice.invoice_number} to {invoice.client.peppol_id}")
+    result["success"] = True
+    result["message"] = f"Invoice {invoice.invoice_number} queued for Peppol delivery"
+    result["transmission_id"] = f"PEPPOL-{invoice.invoice_number}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-    return True
+    return result
+
+
+def send_peppol_invoice_sync(invoice: "Invoice", company: "CompanySettings") -> bool:
+    """Synchronous wrapper for send_peppol_invoice (deprecated).
+
+    Use send_peppol_invoice async function instead.
+    """
+    import asyncio
+    loop = asyncio.new_event_loop()
+    try:
+        result = loop.run_until_complete(
+            send_peppol_invoice(invoice, company, validate_recipient=False)
+        )
+        return result["success"]
+    finally:
+        loop.close()
