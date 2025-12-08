@@ -14,6 +14,7 @@ import {
   XMarkIcon,
   ArrowRightOnRectangleIcon,
   ShoppingBagIcon,
+  ShoppingCartIcon,
   CubeIcon,
   EnvelopeIcon,
 } from '@heroicons/react/24/outline'
@@ -25,6 +26,7 @@ const navigation = [
   { name: 'Fournisseurs', href: '/suppliers', icon: BuildingOfficeIcon },
   { name: 'Articles', href: '/articles', icon: CubeIcon },
   { name: 'Factures', href: '/invoices', icon: DocumentTextIcon },
+  { name: 'Achats', href: '/purchases', icon: ShoppingCartIcon },
   { name: 'Notes de frais', href: '/expenses', icon: CurrencyEuroIcon },
   { name: 'Collaborateurs', href: '/collaborators', icon: UserGroupIcon },
   { name: 'Paie', href: '/payroll', icon: ShoppingBagIcon },

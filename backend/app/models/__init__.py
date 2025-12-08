@@ -8,6 +8,9 @@ from app.models.invoice import Invoice, InvoiceLine
 from app.models.expense import Expense, ExpenseType
 from app.models.collaborator import Collaborator, PayrollPeriod, Payslip
 from app.models.email import EmailAccount, Email, EmailTemplate
+from app.models.purchase import (
+    PurchaseCategory, PurchaseContract, Purchase, FixedAsset, DepreciationEntry
+)
 
 __all__ = [
     "User",
@@ -25,4 +28,9 @@ __all__ = [
     "EmailAccount",
     "Email",
     "EmailTemplate",
+    "PurchaseCategory",
+    "PurchaseContract",
+    "Purchase",
+    "FixedAsset",
+    "DepreciationEntry",
 ]

@@ -194,3 +194,61 @@ export const emailsApi = {
     delete: (id: number) => api.delete(`/emails/templates/${id}`),
   },
 }
+
+export const purchasesApi = {
+  // Categories
+  categories: {
+    list: (params?: any) => api.get('/purchases/categories', { params }),
+    get: (id: number) => api.get(`/purchases/categories/${id}`),
+    create: (data: any) => api.post('/purchases/categories', data),
+    update: (id: number, data: any) => api.put(`/purchases/categories/${id}`, data),
+    delete: (id: number) => api.delete(`/purchases/categories/${id}`),
+    getDefaults: (id: number) => api.get(`/purchases/categories/${id}/defaults`),
+  },
+  // Contracts
+  contracts: {
+    list: (params?: any) => api.get('/purchases/contracts', { params }),
+    get: (id: number) => api.get(`/purchases/contracts/${id}`),
+    create: (data: any) => api.post('/purchases/contracts', data),
+    update: (id: number, data: any) => api.put(`/purchases/contracts/${id}`, data),
+    delete: (id: number) => api.delete(`/purchases/contracts/${id}`),
+    billingDates: (id: number) => api.get(`/purchases/contracts/${id}/billing-dates`),
+    generatePurchases: (forDate: string) =>
+      api.post('/purchases/contracts/generate-purchases', null, { params: { for_date: forDate } }),
+  },
+  // Purchases
+  list: (params?: any) => api.get('/purchases', { params }),
+  get: (id: number) => api.get(`/purchases/${id}`),
+  create: (data: any) => api.post('/purchases', data),
+  update: (id: number, data: any) => api.put(`/purchases/${id}`, data),
+  delete: (id: number) => api.delete(`/purchases/${id}`),
+  validate: (id: number) => api.post(`/purchases/${id}/validate`),
+  uploadDocument: (id: number, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/purchases/${id}/document`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  calculate: (data: any) => api.post('/purchases/calculate', data),
+  // Fixed Assets
+  assets: {
+    list: (params?: any) => api.get('/purchases/assets', { params }),
+    get: (id: number) => api.get(`/purchases/assets/${id}`),
+    create: (data: any) => api.post('/purchases/assets', data),
+    update: (id: number, data: any) => api.put(`/purchases/assets/${id}`, data),
+    delete: (id: number) => api.delete(`/purchases/assets/${id}`),
+    regenerateDepreciation: (id: number) => api.post(`/purchases/assets/${id}/regenerate-depreciation`),
+  },
+  // Reports
+  reports: {
+    summary: (startDate: string, endDate: string) =>
+      api.get('/purchases/reports/summary', { params: { start_date: startDate, end_date: endDate } }),
+    vat: (startDate: string, endDate: string) =>
+      api.get('/purchases/reports/vat', { params: { start_date: startDate, end_date: endDate } }),
+    pcmn: (startDate: string, endDate: string) =>
+      api.get('/purchases/reports/pcmn', { params: { start_date: startDate, end_date: endDate } }),
+    investments: (asOfDate: string) =>
+      api.get('/purchases/reports/investments', { params: { as_of_date: asOfDate } }),
+  },
+}

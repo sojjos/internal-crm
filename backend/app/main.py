@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.db.database import Base, engine
 from app.api.routes import (
     auth, users, company, clients, suppliers,
-    articles, invoices, expenses, collaborators, reports, peppol, emails
+    articles, invoices, expenses, collaborators, reports, peppol, emails, purchases
 )
 
 
@@ -27,6 +27,7 @@ async def lifespan(app: FastAPI):
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "invoices"), exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "receipts"), exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "payslips"), exist_ok=True)
+    os.makedirs(os.path.join(settings.UPLOAD_DIR, "purchases"), exist_ok=True)
 
     yield
 
@@ -68,6 +69,7 @@ app.include_router(collaborators.router, prefix="/api/collaborators", tags=["Col
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports & Exports"])
 app.include_router(peppol.router, prefix="/api/peppol", tags=["Peppol Directory"])
 app.include_router(emails.router, prefix="/api/emails", tags=["Email Client"])
+app.include_router(purchases.router, prefix="/api/purchases", tags=["Purchases & Investments"])
 
 
 @app.get("/api/health")

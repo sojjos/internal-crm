@@ -24,6 +24,11 @@ import UserForm from './pages/UserForm'
 import Emails from './pages/Emails'
 import EmailCompose from './pages/EmailCompose'
 import EmailSettings from './pages/EmailSettings'
+import Purchases from './pages/Purchases'
+import PurchaseForm from './pages/PurchaseForm'
+import Contracts from './pages/Contracts'
+import ContractForm from './pages/ContractForm'
+import FixedAssets from './pages/FixedAssets'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -78,6 +83,17 @@ export default function App() {
         <Route path="invoices/new" element={<InvoiceForm />} />
         <Route path="invoices/:id" element={<InvoiceDetail />} />
         <Route path="invoices/:id/edit" element={<InvoiceForm />} />
+
+        {/* Purchases */}
+        <Route path="purchases" element={<Purchases />} />
+        <Route path="purchases/new" element={<PurchaseForm />} />
+        <Route path="purchases/:id" element={<PurchaseForm />} />
+        <Route path="purchases/contracts" element={<Contracts />} />
+        <Route path="purchases/contracts/new" element={<ContractForm />} />
+        <Route path="purchases/contracts/:id" element={<ContractForm />} />
+        <Route path="purchases/assets" element={<FixedAssets />} />
+        <Route path="purchases/assets/new" element={<PurchaseForm />} />
+        <Route path="purchases/assets/:id" element={<FixedAssets />} />
 
         {/* Expenses */}
         <Route path="expenses" element={<Expenses />} />

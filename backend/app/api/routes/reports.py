@@ -13,6 +13,7 @@ from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.expense import Expense
+from app.models.purchase import Purchase, PurchaseStatus
 from app.services.export_service import (
     export_invoices_to_excel,
     export_expenses_to_excel,
@@ -72,10 +73,20 @@ def get_dashboard_stats(
         Invoice.status.in_([InvoiceStatus.SENT, InvoiceStatus.PAID])
     ).scalar() or 0.0
 
-    # YTD Expenses
-    total_expenses = db.query(func.sum(Expense.amount_tvac)).filter(
+    # YTD Expenses (notes de frais)
+    expenses_total = db.query(func.sum(Expense.amount_tvac)).filter(
         Expense.expense_date >= year_start
     ).scalar() or 0.0
+
+    # YTD Purchases (achats fournisseurs)
+    purchases_total = db.query(
+        func.sum(Purchase.amount_htva + Purchase.vat_amount)
+    ).filter(
+        Purchase.purchase_date >= year_start,
+        Purchase.status != PurchaseStatus.ANNULE
+    ).scalar() or 0.0
+
+    total_expenses = float(expenses_total) + float(purchases_total)
 
     # Outstanding invoices
     outstanding = db.query(func.sum(Invoice.total_tvac)).filter(
@@ -195,17 +206,27 @@ def get_vat_summary(
     ).scalar() or 0.0
 
     # VAT deductible (from expenses)
-    vat_deductible = db.query(func.sum(Expense.vat_amount)).filter(
+    expenses_vat_deductible = db.query(func.sum(Expense.vat_amount)).filter(
         Expense.expense_date >= date_from,
         Expense.expense_date <= date_to
     ).scalar() or 0.0
+
+    # VAT deductible (from purchases)
+    purchases_vat_deductible = db.query(func.sum(Purchase.vat_deductible_amount)).filter(
+        Purchase.purchase_date >= date_from,
+        Purchase.purchase_date <= date_to,
+        Purchase.status != PurchaseStatus.ANNULE
+    ).scalar() or 0.0
+
+    # Total VAT deductible
+    vat_deductible = float(expenses_vat_deductible) + float(purchases_vat_deductible)
 
     return VATSummary(
         period_start=date_from,
         period_end=date_to,
         vat_collected=float(vat_collected),
-        vat_deductible=float(vat_deductible),
-        vat_balance=float(vat_collected) - float(vat_deductible)
+        vat_deductible=vat_deductible,
+        vat_balance=float(vat_collected) - vat_deductible
     )
 
 
