@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import api from '../services/api'
 
 interface User {
@@ -13,7 +12,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<User>
   logout: () => void
 }
 
@@ -22,7 +21,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
     // Check if user is logged in
@@ -47,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<User> => {
     const formData = new FormData()
     formData.append('username', email)
     formData.append('password', password)
@@ -58,15 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('token', access_token)
     api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
     setUser(userData)
-    navigate('/')
-  }
+    return userData
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token')
     delete api.defaults.headers.common['Authorization']
     setUser(null)
-    navigate('/login')
-  }
+  }, [])
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
