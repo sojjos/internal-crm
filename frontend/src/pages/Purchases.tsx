@@ -6,7 +6,6 @@ import {
   PencilIcon,
   TrashIcon,
   CheckCircleIcon,
-  DocumentIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { purchasesApi } from '../services/api'
 import {
   PlusIcon,
-  PencilIcon,
   TrashIcon,
   ChartBarIcon,
   ArrowPathIcon,
