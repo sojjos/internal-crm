@@ -46,11 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const login = useCallback(async (email: string, password: string): Promise<User> => {
-    const formData = new FormData()
-    formData.append('username', email)
-    formData.append('password', password)
+    const params = new URLSearchParams()
+    params.append('username', email)
+    params.append('password', password)
 
-    const response = await api.post('/auth/login', formData)
+    const response = await api.post('/auth/login', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    })
     const { access_token, user: userData } = response.data
 
     localStorage.setItem('token', access_token)
