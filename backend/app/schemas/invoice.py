@@ -1,9 +1,14 @@
 """Invoice schemas."""
+from __future__ import annotations
+
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from pydantic import BaseModel
 
 from app.models.invoice import InvoiceStatus
+
+if TYPE_CHECKING:
+    from app.schemas.client import ClientResponse
 
 
 class InvoiceLineBase(BaseModel):
@@ -99,8 +104,12 @@ class InvoiceResponse(InvoiceBase):
 
 class InvoiceWithClient(InvoiceResponse):
     """Invoice response with client details."""
-    from app.schemas.client import ClientResponse
-    client: ClientResponse
+    client: "ClientResponse"
 
     class Config:
         from_attributes = True
+
+
+# Import at runtime to resolve forward reference
+from app.schemas.client import ClientResponse
+InvoiceWithClient.model_rebuild()
