@@ -12,6 +12,7 @@ interface EmailAccount {
   id: number
   name: string
   email_address: string
+  is_default: boolean
   signature_html: string | null
   signature_text: string | null
 }
