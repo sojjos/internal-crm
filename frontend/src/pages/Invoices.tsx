@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { invoicesApi } from '../services/api'
-import { PlusIcon, EyeIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, EyeIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 interface Invoice {

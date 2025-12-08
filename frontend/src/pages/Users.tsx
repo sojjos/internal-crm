@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { usersApi, authApi } from '../services/api'
+import { usersApi } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
