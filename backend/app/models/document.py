@@ -18,6 +18,8 @@ class DocumentType(str, PyEnum):
     BON_COMMANDE = "BON_COMMANDE"
     DEVIS_FOURNISSEUR = "DEVIS_FOURNISSEUR"
     PROCES_VERBAL = "PROCES_VERBAL"
+    FACTURE_CLIENT = "FACTURE_CLIENT"  # Generated invoice PDF
+    DEVIS_CLIENT = "DEVIS_CLIENT"  # Generated quote PDF
     AUTRE = "AUTRE"
 
 
@@ -66,6 +68,7 @@ class Document(Base):
     fixed_asset_id = Column(Integer, ForeignKey("fixed_assets.id"), nullable=True)
     collaborator_id = Column(Integer, ForeignKey("collaborators.id"), nullable=True)
     invoice_id = Column(Integer, ForeignKey("invoices.id"), nullable=True)
+    quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
 
     # Tags for search
     tags = Column(String(500), nullable=True)  # Comma-separated tags
@@ -85,4 +88,5 @@ class Document(Base):
     fixed_asset = relationship("FixedAsset", backref="documents")
     collaborator = relationship("Collaborator", backref="documents")
     invoice = relationship("Invoice", backref="documents")
+    quote = relationship("Quote", backref="documents")
     created_by = relationship("User", backref="created_documents")

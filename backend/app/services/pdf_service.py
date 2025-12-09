@@ -1,4 +1,4 @@
-"""PDF generation service for invoices."""
+"""PDF generation service for invoices and quotes."""
 import os
 from datetime import datetime, date
 from typing import TYPE_CHECKING, Optional
@@ -10,6 +10,7 @@ from app.core.config import settings
 
 if TYPE_CHECKING:
     from app.models.invoice import Invoice
+    from app.models.quote import Quote
     from app.models.company import CompanySettings
 
 
@@ -87,3 +88,52 @@ def generate_invoice_html(invoice: "Invoice", company: "CompanySettings") -> str
     }
 
     return template.render(**context)
+
+
+def generate_quote_pdf(
+    quote: "Quote",
+    company: "CompanySettings",
+    is_accepted: bool = False,
+    accepted_date: Optional[date] = None
+) -> str:
+    """Generate PDF for a quote.
+
+    Args:
+        quote: Quote model with lines and client loaded
+        company: Company settings
+        is_accepted: Whether to show ACCEPTED stamp
+        accepted_date: Date of acceptance for the stamp
+
+    Returns:
+        Path to generated PDF file
+    """
+    # Setup Jinja2 environment
+    env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+    template = env.get_template("quote.html")
+
+    # Prepare template context
+    context = {
+        "quote": quote,
+        "company": company,
+        "client": quote.client,
+        "lines": quote.lines,
+        "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+        "is_accepted": is_accepted,
+        "accepted_date": accepted_date,
+    }
+
+    # Render HTML
+    html_content = template.render(**context)
+
+    # Create output directory
+    output_dir = os.path.join(settings.UPLOAD_DIR, "quotes")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Generate PDF
+    filename = f"quote_{quote.quote_number.replace('/', '-')}.pdf"
+    filepath = os.path.join(output_dir, filename)
+
+    HTML(string=html_content).write_pdf(filepath)
+
+    # Return relative path for URL access
+    return f"quotes/{filename}"

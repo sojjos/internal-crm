@@ -13,6 +13,7 @@ from app.models.user import User
 from app.models.invoice import Invoice, InvoiceLine, InvoiceStatus
 from app.models.client import Client
 from app.models.company import CompanySettings
+from app.models.document import Document, DocumentType
 from app.schemas.invoice import (
     InvoiceCreate, InvoiceUpdate, InvoiceResponse,
     InvoiceLineCreate, InvoiceLineUpdate, InvoiceLineResponse
@@ -251,6 +252,50 @@ def delete_invoice_line(
     return {"message": "Line deleted"}
 
 
+def create_invoice_document(
+    db: Session,
+    invoice: Invoice,
+    pdf_path: str,
+    user_id: int
+) -> Document:
+    """Create or update a Document record for an invoice PDF."""
+    # Check if a document already exists for this invoice
+    existing_doc = db.query(Document).filter(
+        Document.invoice_id == invoice.id,
+        Document.document_type == DocumentType.FACTURE_CLIENT
+    ).first()
+
+    # Get file info
+    full_path = os.path.join(settings.UPLOAD_DIR, pdf_path)
+    file_size = os.path.getsize(full_path) if os.path.exists(full_path) else 0
+    file_name = os.path.basename(pdf_path)
+
+    if existing_doc:
+        # Update existing document
+        existing_doc.file_path = pdf_path
+        existing_doc.file_name = file_name
+        existing_doc.file_size = file_size
+        existing_doc.updated_at = datetime.utcnow()
+        return existing_doc
+    else:
+        # Create new document
+        document = Document(
+            title=f"Facture {invoice.invoice_number}",
+            description=f"Facture client {invoice.invoice_number}",
+            document_type=DocumentType.FACTURE_CLIENT,
+            file_path=pdf_path,
+            file_name=file_name,
+            file_size=file_size,
+            mime_type="application/pdf",
+            document_date=invoice.invoice_date,
+            client_id=invoice.client_id,
+            invoice_id=invoice.id,
+            created_by_id=user_id
+        )
+        db.add(document)
+        return document
+
+
 @router.post("/{invoice_id}/generate-pdf")
 def generate_pdf(
     invoice_id: int,
@@ -274,6 +319,10 @@ def generate_pdf(
     try:
         pdf_path = generate_invoice_pdf(invoice, company)
         invoice.pdf_path = pdf_path
+
+        # Create/update document record
+        create_invoice_document(db, invoice, pdf_path, current_user.id)
+
         db.commit()
         return {"pdf_path": pdf_path}
     except Exception as e:
@@ -422,6 +471,8 @@ def mark_invoice_paid(
                 is_paid=True,
                 payment_date=actual_payment_date
             )
+            # Update document record
+            create_invoice_document(db, invoice, invoice.pdf_path, current_user.id)
         except Exception as e:
             # Log error but don't fail the payment marking
             print(f"Error generating paid PDF: {e}")
