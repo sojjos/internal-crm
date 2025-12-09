@@ -342,7 +342,7 @@ export default function Quotes() {
                           Voir facture
                         </Link>
                       )}
-                      {!['BROUILLON'].includes(quote.status) && (
+                      {!['BROUILLON', 'CONVERTI'].includes(quote.status) && (
                         <Link
                           to={`/quotes/${quote.id}`}
                           className="text-gray-600 hover:text-gray-800"
