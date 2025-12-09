@@ -165,17 +165,14 @@ if existing:
     print("Utilisateur admin existe déjà, mise à jour du mot de passe...")
     existing.hashed_password = get_password_hash("admin")
     existing.is_active = True
-    existing.is_superuser = True
 else:
     print("Création de l'utilisateur admin...")
     admin = User(
         email="admin@sme.be",
-        username="admin",
         hashed_password=get_password_hash("admin"),
         first_name="Admin",
         last_name="System",
-        is_active=True,
-        is_superuser=True
+        is_active=True
     )
     db.add(admin)
 
