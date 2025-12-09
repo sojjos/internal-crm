@@ -66,6 +66,7 @@ export default function QuoteForm() {
         articlesApi.list({ is_active: true }),
       ])
       setClients(clientsRes.data)
+      console.log('Articles loaded:', articlesRes.data)
       setArticles(articlesRes.data)
     } catch (error) {
       console.error('Error loading initial data:', error)
@@ -158,6 +159,7 @@ export default function QuoteForm() {
 
     if (field === 'article_id' && value) {
       const article = articles.find(a => a.id === parseInt(value))
+      console.log('Selected article:', article, 'from value:', value)
       if (article) {
         newLines[index].description = article.name
         newLines[index].unit_price_htva = article.base_price || 0
@@ -168,6 +170,7 @@ export default function QuoteForm() {
         const discount = Number(newLines[index].discount_percent) || 0
         const subtotal = qty * price
         newLines[index].total_htva = subtotal - (subtotal * discount / 100)
+        console.log('Updated line:', newLines[index])
       }
     }
 
