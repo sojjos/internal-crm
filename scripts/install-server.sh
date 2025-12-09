@@ -3,94 +3,79 @@
 # =============================================================================
 # Script d'installation complète - SME Management (Belgian)
 # Pour Ubuntu 20.04/22.04 LTS sur serveur vierge
+# Usage: ./install-server.sh [IP_OU_DOMAINE]
+# Exemple: ./install-server.sh 109.199.101.5
 # =============================================================================
 
 set -e
 
 # Configuration
 APP_DIR="/opt/sme-management"
-DOMAIN="votre-domaine.com"  # Modifier selon votre domaine
+DOMAIN="${1:-109.199.101.5}"  # Premier argument ou IP par défaut
 GIT_REPO="https://github.com/sojjos/internal-crm.git"
 GIT_BRANCH="claude/setup-admin-user-01BTRbCY7wK78UzRxAQmdg5B"
+DB_PASSWORD="SmeSecure2024!"
 
 # Couleurs pour les messages
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-echo_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
+echo_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+echo_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+echo_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-echo_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-echo_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+echo_info "=== Installation SME Management ==="
+echo_info "Domaine/IP: $DOMAIN"
 
 # =============================================================================
 # 1. Mise à jour du système
 # =============================================================================
-echo_info "=== Mise à jour du système ==="
+echo_info "=== 1/12 Mise à jour du système ==="
 apt update && apt upgrade -y
 
 # =============================================================================
 # 2. Installation des dépendances système
 # =============================================================================
-echo_info "=== Installation des dépendances système ==="
+echo_info "=== 2/12 Installation des dépendances système ==="
 apt install -y \
-    curl \
-    wget \
-    git \
-    nginx \
-    certbot \
-    python3-certbot-nginx \
-    python3 \
-    python3-pip \
-    python3-venv \
-    build-essential \
-    libpq-dev \
-    postgresql \
-    postgresql-contrib \
-    supervisor \
-    ufw
+    curl wget git nginx certbot python3-certbot-nginx \
+    python3 python3-pip python3-venv \
+    build-essential libpq-dev \
+    postgresql postgresql-contrib \
+    supervisor ufw
 
 # =============================================================================
 # 3. Installation de Node.js 20.x
 # =============================================================================
-echo_info "=== Installation de Node.js 20.x ==="
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
+echo_info "=== 3/12 Installation de Node.js 20.x ==="
+if ! command -v node &> /dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt install -y nodejs
+fi
 npm install -g npm@latest
-
-echo_info "Node.js version: $(node -v)"
-echo_info "NPM version: $(npm -v)"
+echo_info "Node.js: $(node -v) | NPM: $(npm -v)"
 
 # =============================================================================
 # 4. Configuration de PostgreSQL
 # =============================================================================
-echo_info "=== Configuration de PostgreSQL ==="
+echo_info "=== 4/12 Configuration de PostgreSQL ==="
 systemctl start postgresql
 systemctl enable postgresql
 
-# Créer l'utilisateur et la base de données
-sudo -u postgres psql <<EOF
-CREATE USER smeadmin WITH PASSWORD 'VotreMotDePasseSecurise123!';
-CREATE DATABASE sme_management OWNER smeadmin;
-GRANT ALL PRIVILEGES ON DATABASE sme_management TO smeadmin;
-EOF
-
-echo_info "Base de données PostgreSQL créée"
+# Créer l'utilisateur et la base de données (ignorer si existe)
+sudo -u postgres psql -c "CREATE USER smeadmin WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null || echo_warn "User smeadmin existe déjà"
+sudo -u postgres psql -c "CREATE DATABASE sme_management OWNER smeadmin;" 2>/dev/null || echo_warn "Database sme_management existe déjà"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE sme_management TO smeadmin;" 2>/dev/null || true
 
 # =============================================================================
 # 5. Cloner le repository
 # =============================================================================
-echo_info "=== Clonage du repository ==="
+echo_info "=== 5/12 Clonage du repository ==="
 if [ -d "$APP_DIR" ]; then
-    echo_warn "Le répertoire $APP_DIR existe déjà. Suppression..."
+    echo_warn "Suppression de l'ancienne installation..."
+    supervisorctl stop sme-backend 2>/dev/null || true
     rm -rf "$APP_DIR"
 fi
 
@@ -98,75 +83,57 @@ git clone "$GIT_REPO" "$APP_DIR"
 cd "$APP_DIR"
 git checkout "$GIT_BRANCH"
 
-# =============================================================================
-# 6. Configuration du Backend
-# =============================================================================
-echo_info "=== Configuration du Backend ==="
-cd "$APP_DIR/backend"
-
-# Créer l'environnement virtuel Python
-python3 -m venv venv
-source venv/bin/activate
-
-# Installer les dépendances Python
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Créer le fichier .env
-cat > .env <<EOF
-# Database
-DATABASE_URL=postgresql://smeadmin:VotreMotDePasseSecurise123!@localhost:5432/sme_management
-
-# Security
-SECRET_KEY=$(openssl rand -hex 32)
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
-
-# App
-APP_NAME="SME Management"
-DEBUG=false
-ENVIRONMENT=production
-
-# Upload
-UPLOAD_DIR=/opt/sme-management/uploads
-MAX_UPLOAD_SIZE=10485760
-
-# Email (configurer selon votre fournisseur)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=votre-email@gmail.com
-SMTP_PASSWORD=votre-mot-de-passe-app
-SMTP_FROM=votre-email@gmail.com
-EOF
-
 # Créer les répertoires nécessaires
-mkdir -p "$APP_DIR/uploads"
 mkdir -p "$APP_DIR/uploads/invoices"
 mkdir -p "$APP_DIR/uploads/documents"
 mkdir -p "$APP_DIR/uploads/expenses"
 mkdir -p "$APP_DIR/logs"
 
-# Initialiser la base de données
-echo_info "Initialisation de la base de données..."
+# =============================================================================
+# 6. Configuration du Backend
+# =============================================================================
+echo_info "=== 6/12 Configuration du Backend ==="
+cd "$APP_DIR/backend"
+
+python3 -m venv venv
+source venv/bin/activate
+
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Créer le fichier .env
+SECRET_KEY=$(openssl rand -hex 32)
+cat > .env << ENVEOF
+DATABASE_URL=postgresql://smeadmin:${DB_PASSWORD}@localhost:5432/sme_management
+SECRET_KEY=${SECRET_KEY}
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+APP_NAME=SME Management
+DEBUG=false
+ENVIRONMENT=production
+UPLOAD_DIR=${APP_DIR}/uploads
+MAX_UPLOAD_SIZE=10485760
+ENVEOF
+
+# =============================================================================
+# 7. Initialiser la base de données
+# =============================================================================
+echo_info "=== 7/12 Initialisation de la base de données ==="
 python -c "from app.db.database import engine, Base; from app.models import *; Base.metadata.create_all(bind=engine)"
 
 # Créer l'utilisateur admin
-echo_info "Création de l'utilisateur admin..."
-python <<EOF
+python << 'ADMINEOF'
 from app.db.database import SessionLocal
 from app.models.user import User
 from app.core.security import get_password_hash
 
 db = SessionLocal()
-
-# Vérifier si admin existe déjà
 existing = db.query(User).filter(User.email == "admin@sme.be").first()
 if existing:
-    print("Utilisateur admin existe déjà, mise à jour du mot de passe...")
     existing.hashed_password = get_password_hash("admin")
     existing.is_active = True
+    print("Admin mis à jour")
 else:
-    print("Création de l'utilisateur admin...")
     admin = User(
         email="admin@sme.be",
         hashed_password=get_password_hash("admin"),
@@ -175,136 +142,118 @@ else:
         is_active=True
     )
     db.add(admin)
-
+    print("Admin créé")
 db.commit()
 db.close()
-print("Utilisateur admin créé/mis à jour avec succès!")
-print("Email: admin@sme.be")
-print("Mot de passe: admin")
-EOF
+ADMINEOF
 
 deactivate
 
 # =============================================================================
-# 7. Configuration du Frontend
+# 8. Configuration du Frontend
 # =============================================================================
-echo_info "=== Configuration du Frontend ==="
+echo_info "=== 8/12 Configuration du Frontend ==="
 cd "$APP_DIR/frontend"
 
-# Créer le fichier .env
-cat > .env <<EOF
-VITE_API_URL=https://${DOMAIN}/api
-EOF
+cat > .env << ENVEOF
+VITE_API_URL=http://${DOMAIN}/api
+ENVEOF
 
-# Installer les dépendances et construire
 npm install
 npm run build
 
 # =============================================================================
-# 8. Configuration de Supervisor pour le Backend
+# 9. Configuration de Supervisor
 # =============================================================================
-echo_info "=== Configuration de Supervisor ==="
-cat > /etc/supervisor/conf.d/sme-backend.conf <<EOF
+echo_info "=== 9/12 Configuration de Supervisor ==="
+cat > /etc/supervisor/conf.d/sme-backend.conf << SUPEOF
 [program:sme-backend]
-command=$APP_DIR/backend/venv/bin/gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 127.0.0.1:8000
-directory=$APP_DIR/backend
+command=${APP_DIR}/backend/venv/bin/gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 127.0.0.1:8000
+directory=${APP_DIR}/backend
 user=root
 autostart=true
 autorestart=true
-stderr_logfile=$APP_DIR/logs/backend.err.log
-stdout_logfile=$APP_DIR/logs/backend.out.log
-environment=PATH="$APP_DIR/backend/venv/bin"
-EOF
+stderr_logfile=${APP_DIR}/logs/backend.err.log
+stdout_logfile=${APP_DIR}/logs/backend.out.log
+SUPEOF
 
+systemctl enable supervisor
+systemctl start supervisor
+sleep 2
 supervisorctl reread
 supervisorctl update
-supervisorctl start sme-backend
+supervisorctl restart sme-backend || supervisorctl start sme-backend
 
 # =============================================================================
-# 9. Configuration de Nginx
+# 10. Configuration de Nginx
 # =============================================================================
-echo_info "=== Configuration de Nginx ==="
-cat > /etc/nginx/sites-available/sme-management <<EOF
+echo_info "=== 10/12 Configuration de Nginx ==="
+cat > /etc/nginx/sites-available/sme-management << 'NGINXEOF'
 server {
     listen 80;
-    server_name ${DOMAIN} www.${DOMAIN};
+    server_name _;
 
-    # Redirection vers HTTPS (décommenter après certbot)
-    # return 301 https://\$server_name\$request_uri;
-
-    # Frontend
-    root $APP_DIR/frontend/dist;
+    root /opt/sme-management/frontend/dist;
     index index.html;
 
-    # Gzip compression
     gzip on;
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
 
-    # API Backend
     location /api {
         proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 300;
         proxy_connect_timeout 300;
         client_max_body_size 10M;
     }
 
-    # Fichiers statiques uploadés
     location /uploads {
-        alias $APP_DIR/uploads;
+        alias /opt/sme-management/uploads;
         expires 30d;
-        add_header Cache-Control "public, immutable";
     }
 
-    # Frontend SPA routing
     location / {
-        try_files \$uri \$uri/ /index.html;
+        try_files $uri $uri/ /index.html;
     }
 
-    # Cache pour les assets statiques
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
 }
-EOF
+NGINXEOF
 
-# Activer le site
-ln -sf /etc/nginx/sites-available/sme-management /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
-
-# Tester et recharger Nginx
-nginx -t
-systemctl reload nginx
+ln -sf /etc/nginx/sites-available/sme-management /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
 
 # =============================================================================
-# 10. Configuration du Firewall
+# 11. Configuration du Firewall
 # =============================================================================
-echo_info "=== Configuration du Firewall ==="
+echo_info "=== 11/12 Configuration du Firewall ==="
 ufw allow ssh
-ufw allow 'Nginx Full'
+ufw allow 80
+ufw allow 443
 ufw --force enable
 
 # =============================================================================
-# 11. Permissions
+# 12. Permissions
 # =============================================================================
-echo_info "=== Configuration des permissions ==="
+echo_info "=== 12/12 Configuration des permissions ==="
 chown -R www-data:www-data "$APP_DIR/uploads"
 chmod -R 755 "$APP_DIR/uploads"
 
 # =============================================================================
-# 12. Installation SSL avec Certbot (optionnel)
+# Vérification finale
 # =============================================================================
-echo_info "=== Configuration SSL ==="
-echo_warn "Pour activer HTTPS, exécutez:"
-echo_warn "  certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}"
+echo_info "=== Vérification ==="
+sleep 3
+supervisorctl status sme-backend
+curl -s http://localhost/api/health || echo_warn "API health check non disponible"
 
 # =============================================================================
 # Résumé
@@ -314,18 +263,11 @@ echo "=============================================="
 echo -e "${GREEN}Installation terminée avec succès!${NC}"
 echo "=============================================="
 echo ""
-echo "Informations de connexion:"
-echo "  URL: http://${DOMAIN} (ou IP du serveur)"
-echo "  Email: admin@sme.be"
-echo "  Mot de passe: admin"
+echo "URL: http://$DOMAIN"
+echo "Email: admin@sme.be"
+echo "Mot de passe: admin"
 echo ""
 echo "Commandes utiles:"
-echo "  Redémarrer le backend: supervisorctl restart sme-backend"
-echo "  Logs backend: tail -f $APP_DIR/logs/backend.out.log"
-echo "  Status: supervisorctl status"
-echo ""
-echo "IMPORTANT: Changez le mot de passe admin après la première connexion!"
-echo ""
-echo "Pour activer HTTPS:"
-echo "  certbot --nginx -d ${DOMAIN} -d www.${DOMAIN}"
+echo "  supervisorctl restart sme-backend"
+echo "  tail -f $APP_DIR/logs/backend.out.log"
 echo ""
