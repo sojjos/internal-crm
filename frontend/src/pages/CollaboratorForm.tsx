@@ -21,6 +21,8 @@ interface CollaboratorFormData {
   hourly_rate: number | null
   iban: string
   notes: string
+  create_user_account: boolean
+  user_password: string
 }
 
 export default function CollaboratorForm() {
@@ -39,10 +41,13 @@ export default function CollaboratorForm() {
     defaultValues: {
       address_country: 'Belgique',
       contract_type: 'cdi',
+      create_user_account: false,
+      user_password: '',
     },
   })
 
   const contractType = watch('contract_type')
+  const createUserAccount = watch('create_user_account')
 
   useEffect(() => {
     if (isEdit) {
@@ -198,6 +203,45 @@ export default function CollaboratorForm() {
             <label className="label">Notes internes</label>
             <textarea {...register('notes')} className="input" rows={3} />
           </div>
+
+          {/* Section compte utilisateur - uniquement lors de la création */}
+          {!isEdit && (
+            <div className="md:col-span-2 border-t pt-4 mt-2">
+              <h3 className="text-lg font-medium mb-4">Accès au système</h3>
+
+              <div className="flex items-center mb-4">
+                <input
+                  type="checkbox"
+                  id="create_user_account"
+                  {...register('create_user_account')}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                />
+                <label htmlFor="create_user_account" className="ml-2 text-sm text-gray-700">
+                  Créer un compte utilisateur pour ce collaborateur
+                </label>
+              </div>
+
+              {createUserAccount && (
+                <div className="ml-6 space-y-4">
+                  <p className="text-sm text-gray-500">
+                    L'email du collaborateur sera utilisé comme identifiant de connexion.
+                  </p>
+                  <div>
+                    <label className="label">Mot de passe (optionnel)</label>
+                    <input
+                      type="password"
+                      {...register('user_password')}
+                      className="input"
+                      placeholder="Laissez vide pour 'changeme123'"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Si laissé vide, le mot de passe par défaut sera "changeme123"
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-4 mt-6 pt-6 border-t">

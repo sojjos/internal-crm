@@ -11,6 +11,7 @@ from app.api.deps import get_db, get_current_user
 from app.core.config import settings
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.models.user import User
+from app.models.collaborator import Collaborator
 from app.schemas.user import UserCreate, UserResponse, UserLogin, Token
 
 router = APIRouter()
@@ -195,6 +196,18 @@ def register_user(
         phone=user_in.phone,
     )
     db.add(user)
+    db.flush()  # Get the user ID before commit
+
+    # Automatically create a Collaborator profile for the new user
+    collaborator = Collaborator(
+        user_id=user.id,
+        first_name=user_in.first_name,
+        last_name=user_in.last_name,
+        email=user_in.email,
+        phone=user_in.phone,
+        is_active=True
+    )
+    db.add(collaborator)
     db.commit()
     db.refresh(user)
 

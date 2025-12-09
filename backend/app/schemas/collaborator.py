@@ -28,7 +28,8 @@ class CollaboratorBase(BaseModel):
 
 class CollaboratorCreate(CollaboratorBase):
     """Schema for creating a collaborator."""
-    pass
+    create_user_account: bool = False  # Option to create a user account
+    user_password: Optional[str] = None  # Password if creating user account
 
 
 class CollaboratorUpdate(BaseModel):
@@ -55,12 +56,23 @@ class CollaboratorUpdate(BaseModel):
 class CollaboratorResponse(CollaboratorBase):
     """Schema for collaborator response."""
     id: int
+    user_id: Optional[int] = None
+    has_user_account: bool = False
     is_active: bool
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        # Add computed field
+        if hasattr(obj, 'user_id'):
+            obj_dict = {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
+            obj_dict['has_user_account'] = obj.user_id is not None
+            return super().model_validate(obj_dict, **kwargs)
+        return super().model_validate(obj, **kwargs)
 
 
 class PayrollPeriodCreate(BaseModel):

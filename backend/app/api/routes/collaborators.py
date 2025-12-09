@@ -12,6 +12,7 @@ import io
 
 from app.api.deps import get_db, get_current_user
 from app.core.config import settings
+from app.core.security import get_password_hash
 from app.models.user import User
 from app.models.collaborator import Collaborator, ContractType, PayrollPeriod, Payslip
 from app.models.expense import Expense
@@ -65,8 +66,42 @@ def create_collaborator(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    """Create a new collaborator."""
-    collaborator = Collaborator(**collaborator_in.model_dump())
+    """Create a new collaborator, optionally with a user account."""
+    # Extract user creation fields
+    create_user = collaborator_in.create_user_account
+    user_password = collaborator_in.user_password
+
+    # Prepare collaborator data (exclude user-related fields)
+    collab_data = collaborator_in.model_dump(exclude={'create_user_account', 'user_password'})
+
+    user_id = None
+
+    # Create user account if requested
+    if create_user and collaborator_in.email:
+        # Check if user with this email already exists
+        existing_user = db.query(User).filter(User.email == collaborator_in.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Un utilisateur avec cet email existe déjà"
+            )
+
+        # Create user
+        password = user_password or "changeme123"  # Default password if not provided
+        new_user = User(
+            email=collaborator_in.email,
+            hashed_password=get_password_hash(password),
+            first_name=collaborator_in.first_name,
+            last_name=collaborator_in.last_name,
+            phone=collaborator_in.phone,
+            is_active=True
+        )
+        db.add(new_user)
+        db.flush()  # Get the user ID
+        user_id = new_user.id
+
+    # Create collaborator
+    collaborator = Collaborator(**collab_data, user_id=user_id)
     db.add(collaborator)
     db.commit()
     db.refresh(collaborator)

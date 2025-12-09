@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { collaboratorsApi } from '../services/api'
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, UserIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
 interface Collaborator {
@@ -12,6 +12,7 @@ interface Collaborator {
   contract_type: string
   manager_type: string | null
   is_active: boolean
+  user_id: number | null
 }
 
 const contractLabels: Record<string, string> = {
@@ -97,6 +98,7 @@ export default function Collaborators() {
                 <th className="table-header px-6 py-3">Nom</th>
                 <th className="table-header px-6 py-3">Email</th>
                 <th className="table-header px-6 py-3">Type de contrat</th>
+                <th className="table-header px-6 py-3">Compte</th>
                 <th className="table-header px-6 py-3">Actions</th>
               </tr>
             </thead>
@@ -117,6 +119,16 @@ export default function Collaborators() {
                       <span className="ml-2 text-sm text-gray-500">
                         ({collab.manager_type})
                       </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {collab.user_id ? (
+                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                        <UserIcon className="h-3 w-3 mr-1" />
+                        Actif
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
