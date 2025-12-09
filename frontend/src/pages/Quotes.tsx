@@ -377,13 +377,15 @@ export default function Quotes() {
                           <PencilIcon className="h-5 w-5" />
                         </Link>
                       )}
-                      <button
-                        onClick={() => handleDownloadPdf(quote)}
-                        className="text-green-600 hover:text-green-800"
-                        title="Telecharger PDF"
-                      >
-                        <ArrowDownTrayIcon className="h-5 w-5" />
-                      </button>
+                      {quote.status !== 'CONVERTI' && (
+                        <button
+                          onClick={() => handleDownloadPdf(quote)}
+                          className="text-green-600 hover:text-green-800"
+                          title="Telecharger PDF"
+                        >
+                          <ArrowDownTrayIcon className="h-5 w-5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
