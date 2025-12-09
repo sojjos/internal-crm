@@ -8,15 +8,21 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 
+from fastapi.responses import FileResponse
+
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
 from app.models.quote import Quote, QuoteLine, QuoteStatus
 from app.models.invoice import Invoice, InvoiceLine, InvoiceStatus
+from app.models.company import CompanySettings
+from app.models.document import Document, DocumentType
 from app.schemas.quote import (
     QuoteCreate, QuoteUpdate, QuoteResponse,
     QuoteLineCreate, QuoteLineUpdate, QuoteLineResponse,
     QuoteConvertRequest
 )
+from app.services.pdf_service import generate_quote_pdf
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -501,3 +507,107 @@ def client_accept_quote(
     db.commit()
 
     return {"message": "Quote accepted successfully"}
+
+
+# ============ PDF Generation ============
+
+def create_quote_document(db: Session, quote: Quote, pdf_path: str, user_id: int) -> Document:
+    """Create or update Document record for a quote PDF."""
+    # Check if document already exists for this quote
+    existing_doc = db.query(Document).filter(
+        Document.quote_id == quote.id,
+        Document.document_type == DocumentType.DEVIS_CLIENT
+    ).first()
+
+    if existing_doc:
+        # Update existing document
+        existing_doc.file_path = pdf_path
+        existing_doc.updated_at = datetime.utcnow()
+        return existing_doc
+    else:
+        # Create new document
+        doc = Document(
+            name=f"Devis {quote.quote_number}",
+            document_type=DocumentType.DEVIS_CLIENT,
+            file_path=pdf_path,
+            quote_id=quote.id,
+            client_id=quote.client_id,
+            uploaded_by_id=user_id
+        )
+        db.add(doc)
+        return doc
+
+
+@router.post("/{quote_id}/generate-pdf")
+def generate_pdf(
+    quote_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Generate PDF for a quote."""
+    quote = db.query(Quote).options(
+        joinedload(Quote.client),
+        joinedload(Quote.lines)
+    ).filter(Quote.id == quote_id).first()
+
+    if not quote:
+        raise HTTPException(status_code=404, detail="Quote not found")
+
+    # Get company settings
+    company = db.query(CompanySettings).first()
+    if not company:
+        raise HTTPException(status_code=400, detail="Company settings not configured")
+
+    # Determine if quote is accepted
+    is_accepted = quote.status == QuoteStatus.ACCEPTE
+    accepted_date = quote.accepted_at.date() if quote.accepted_at else None
+
+    # Generate PDF
+    pdf_path = generate_quote_pdf(
+        quote,
+        company,
+        is_accepted=is_accepted,
+        accepted_date=accepted_date
+    )
+
+    # Update quote
+    quote.pdf_path = pdf_path
+
+    # Create Document record
+    create_quote_document(db, quote, pdf_path, current_user.id)
+
+    db.commit()
+
+    return {
+        "message": "PDF generated",
+        "pdf_path": pdf_path,
+        "download_url": f"/api/quotes/{quote_id}/download-pdf"
+    }
+
+
+@router.get("/{quote_id}/download-pdf")
+def download_pdf(
+    quote_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Download quote PDF."""
+    quote = db.query(Quote).filter(Quote.id == quote_id).first()
+
+    if not quote:
+        raise HTTPException(status_code=404, detail="Quote not found")
+
+    if not quote.pdf_path:
+        raise HTTPException(status_code=404, detail="PDF not generated yet")
+
+    import os
+    file_path = os.path.join(settings.UPLOAD_DIR, quote.pdf_path)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="PDF file not found")
+
+    return FileResponse(
+        path=file_path,
+        media_type="application/pdf",
+        filename=f"devis_{quote.quote_number.replace('/', '-')}.pdf"
+    )
