@@ -471,6 +471,55 @@ def delete_task(
     return {"message": "Task deleted"}
 
 
+# ============ Pipeline ============
+
+@router.get("/pipeline")
+def get_pipeline_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Get pipeline stage summary."""
+    result = []
+    for stage in PipelineStage:
+        opps = db.query(Opportunity).filter(Opportunity.stage == stage).all()
+        count = len(opps)
+        total_value = sum(o.estimated_value or 0 for o in opps)
+
+        result.append({
+            "stage": stage.value,
+            "count": count,
+            "total_value": float(total_value)
+        })
+
+    return result
+
+
+@router.put("/opportunities/{opportunity_id}/stage")
+def update_opportunity_stage(
+    opportunity_id: int,
+    stage: PipelineStage = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Update opportunity stage."""
+    opportunity = db.query(Opportunity).filter(
+        Opportunity.id == opportunity_id
+    ).first()
+    if not opportunity:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+
+    # Handle stage transitions
+    if stage == PipelineStage.GAGNE:
+        opportunity.won_at = datetime.utcnow()
+    elif stage == PipelineStage.PERDU:
+        opportunity.lost_at = datetime.utcnow()
+
+    opportunity.stage = stage
+    db.commit()
+
+    return {"message": "Stage updated", "stage": stage.value}
+
+
 # ============ Dashboard ============
 
 @router.get("/dashboard")
