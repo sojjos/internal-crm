@@ -6,6 +6,7 @@ import {
   PencilIcon,
   TrashIcon,
   CheckCircleIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -50,6 +51,16 @@ export default function Purchases() {
   const [supplierFilter, setSupplierFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+
+  // Category management
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    pcmn_code: '',
+    vat_deductible_percent: 100,
+    description: '',
+  })
 
   useEffect(() => {
     loadInitialData()
@@ -118,6 +129,56 @@ export default function Purchases() {
     setSearchParams({ tab })
   }
 
+  // Category handlers
+  const openCategoryModal = (category?: Category) => {
+    if (category) {
+      setEditingCategory(category)
+      setCategoryForm({
+        name: category.name,
+        pcmn_code: (category as any).pcmn_code || '',
+        vat_deductible_percent: (category as any).vat_deductible_percent || 100,
+        description: (category as any).description || '',
+      })
+    } else {
+      setEditingCategory(null)
+      setCategoryForm({
+        name: '',
+        pcmn_code: '',
+        vat_deductible_percent: 100,
+        description: '',
+      })
+    }
+    setShowCategoryModal(true)
+  }
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      if (editingCategory) {
+        await purchasesApi.categories.update(editingCategory.id, categoryForm)
+        toast.success('Categorie mise a jour')
+      } else {
+        await purchasesApi.categories.create(categoryForm)
+        toast.success('Categorie creee')
+      }
+      setShowCategoryModal(false)
+      loadInitialData()
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Erreur')
+    }
+  }
+
+  const handleDeleteCategory = async (id: number) => {
+    if (!confirm('Supprimer cette categorie ?')) return
+    try {
+      await purchasesApi.categories.delete(id)
+      toast.success('Categorie supprimee')
+      loadInitialData()
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Erreur lors de la suppression')
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('fr-BE')
   }
@@ -163,10 +224,19 @@ export default function Purchases() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="page-title mb-0">Achats & Investissements</h1>
-        <Link to="/purchases/new" className="btn-primary flex items-center">
-          <PlusIcon className="h-5 w-5 mr-1" />
-          Nouvel achat
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={() => openCategoryModal()}
+            className="btn-secondary flex items-center"
+          >
+            <Cog6ToothIcon className="h-5 w-5 mr-1" />
+            Categories
+          </button>
+          <Link to="/purchases/new" className="btn-primary flex items-center">
+            <PlusIcon className="h-5 w-5 mr-1" />
+            Nouvel achat
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -368,6 +438,130 @@ export default function Purchases() {
           </div>
         )}
       </div>
+
+      {/* Category Management Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold mb-4">
+              {editingCategory ? 'Modifier la categorie' : 'Gestion des categories'}
+            </h2>
+
+            {/* Category List */}
+            {!editingCategory && (
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-medium">Categories existantes</h3>
+                  <button
+                    onClick={() => {
+                      setEditingCategory(null)
+                      setCategoryForm({
+                        name: '',
+                        pcmn_code: '',
+                        vat_deductible_percent: 100,
+                        description: '',
+                      })
+                    }}
+                    className="text-sm text-primary-600 hover:text-primary-800"
+                  >
+                    + Nouvelle categorie
+                  </button>
+                </div>
+                <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                  {categories.length === 0 ? (
+                    <p className="p-4 text-gray-500 text-center">Aucune categorie</p>
+                  ) : (
+                    categories.map((cat) => (
+                      <div key={cat.id} className="flex items-center justify-between p-3 hover:bg-gray-50">
+                        <span>{cat.name}</span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openCategoryModal(cat)}
+                            className="text-primary-600 hover:text-primary-800"
+                          >
+                            <PencilIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCategory(cat.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Category Form */}
+            <form onSubmit={handleSaveCategory} className="space-y-4">
+              <div>
+                <label className="label">Nom de la categorie *</label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                  className="input"
+                  required
+                  placeholder="Ex: Fournitures de bureau"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Code PCMN</label>
+                  <input
+                    type="text"
+                    value={categoryForm.pcmn_code}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, pcmn_code: e.target.value })}
+                    className="input"
+                    placeholder="Ex: 6100"
+                  />
+                </div>
+                <div>
+                  <label className="label">TVA deductible (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={categoryForm.vat_deductible_percent}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, vat_deductible_percent: parseInt(e.target.value) })}
+                    className="input"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label">Description</label>
+                <textarea
+                  value={categoryForm.description}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                  className="input"
+                  rows={2}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editingCategory) {
+                      setEditingCategory(null)
+                    } else {
+                      setShowCategoryModal(false)
+                    }
+                  }}
+                  className="btn-secondary"
+                >
+                  {editingCategory ? 'Retour' : 'Fermer'}
+                </button>
+                <button type="submit" className="btn-primary">
+                  {editingCategory ? 'Mettre a jour' : 'Creer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
