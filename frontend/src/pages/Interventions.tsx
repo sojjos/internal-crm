@@ -146,7 +146,7 @@ export default function Interventions() {
 
   const handleCreateInvoice = async (id: number) => {
     try {
-      const response = await interventionsApi.createInvoice(id)
+      await interventionsApi.createInvoice(id)
       toast.success('Facture creee')
       loadInterventions()
     } catch (error: any) {

@@ -114,7 +114,7 @@ export default function Quotes() {
     if (!confirm('Convertir ce devis en facture ?')) return
 
     try {
-      const response = await quotesApi.convertToInvoice(id)
+      await quotesApi.convertToInvoice(id)
       toast.success('Facture creee')
       loadQuotes()
     } catch (error: any) {
