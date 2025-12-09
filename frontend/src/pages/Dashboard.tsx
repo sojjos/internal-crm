@@ -37,7 +37,7 @@ interface RecentQuote {
   id: number
   quote_number: string
   client_name: string
-  total_ttc: number
+  total_tvac: number
   status: string
   quote_date: string
 }
@@ -354,7 +354,7 @@ export default function Dashboard() {
                       <p className="text-xs text-gray-500">{quote.client_name}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm">{formatCurrency(quote.total_ttc)}</p>
+                      <p className="font-semibold text-sm">{formatCurrency(parseFloat(String(quote.total_tvac)) || 0)}</p>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(quote.status)}`}>
                         {getStatusLabel(quote.status)}
                       </span>
