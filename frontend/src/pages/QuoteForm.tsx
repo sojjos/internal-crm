@@ -22,7 +22,7 @@ interface Article {
   code: string
   name: string
   base_price: number
-  vat_rate: number
+  default_vat_rate: number
 }
 
 export default function QuoteForm() {
@@ -161,7 +161,7 @@ export default function QuoteForm() {
       if (article) {
         newLines[index].description = article.name
         newLines[index].unit_price_htva = article.base_price || 0
-        newLines[index].vat_rate = article.vat_rate || 21
+        newLines[index].vat_rate = article.default_vat_rate || 21
         // Recalculate total
         const qty = Number(newLines[index].quantity) || 1
         const price = Number(article.base_price) || 0
