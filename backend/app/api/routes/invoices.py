@@ -394,8 +394,11 @@ def mark_invoice_paid(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    """Mark an invoice as paid."""
-    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    """Mark an invoice as paid and regenerate PDF with PAID stamp."""
+    invoice = db.query(Invoice).options(
+        joinedload(Invoice.client),
+        joinedload(Invoice.lines)
+    ).filter(Invoice.id == invoice_id).first()
 
     if not invoice:
         raise HTTPException(
@@ -403,13 +406,32 @@ def mark_invoice_paid(
             detail="Invoice not found"
         )
 
+    # Set payment info
+    actual_payment_date = payment_date or date.today()
     invoice.status = InvoiceStatus.PAID
-    invoice.payment_date = payment_date or date.today()
+    invoice.payment_date = actual_payment_date
     invoice.payment_reference = payment_reference
+
+    # Regenerate PDF with PAID stamp
+    company = db.query(CompanySettings).first()
+    if company:
+        try:
+            invoice.pdf_path = generate_invoice_pdf(
+                invoice,
+                company,
+                is_paid=True,
+                payment_date=actual_payment_date
+            )
+        except Exception as e:
+            # Log error but don't fail the payment marking
+            print(f"Error generating paid PDF: {e}")
 
     db.commit()
 
-    return {"message": "Invoice marked as paid"}
+    return {
+        "message": "Invoice marked as paid",
+        "payment_date": actual_payment_date.isoformat()
+    }
 
 
 @router.delete("/{invoice_id}")
