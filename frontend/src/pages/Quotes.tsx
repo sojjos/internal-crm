@@ -134,10 +134,6 @@ export default function Quotes() {
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('fr-BE')
-  }
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-BE', {
       style: 'currency',
