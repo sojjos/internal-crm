@@ -40,6 +40,12 @@ export const authApi = {
   },
   me: () => api.get('/auth/me'),
   register: (data: any) => api.post('/auth/register', data),
+  updateProfile: (data: any) => api.put('/auth/me', data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post('/auth/me/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
 }
 
 export const companyApi = {
