@@ -31,10 +31,24 @@ router = APIRouter()
 def generate_quote_number(db: Session) -> str:
     """Generate a unique quote number."""
     year = datetime.now().year
-    count = db.query(func.count(Quote.id)).filter(
-        func.extract('year', Quote.created_at) == year
-    ).scalar() or 0
-    return f"DEV-{year}-{str(count + 1).zfill(4)}"
+    prefix = f"DEV-{year}-"
+
+    # Find the highest quote number for this year
+    last_quote = db.query(Quote).filter(
+        Quote.quote_number.like(f"{prefix}%")
+    ).order_by(Quote.quote_number.desc()).first()
+
+    if last_quote:
+        # Extract the sequence number from the last quote
+        try:
+            last_number = int(last_quote.quote_number.split("-")[-1])
+            next_number = last_number + 1
+        except (ValueError, IndexError):
+            next_number = 1
+    else:
+        next_number = 1
+
+    return f"{prefix}{str(next_number).zfill(4)}"
 
 
 def calculate_quote_totals(quote: Quote) -> None:
