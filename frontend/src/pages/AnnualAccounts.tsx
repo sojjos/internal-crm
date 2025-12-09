@@ -275,6 +275,7 @@ export default function AnnualAccounts() {
                         </button>
                       )}
                       <button
+                        onClick={() => toast('Détails à implémenter')}
                         className="text-primary-600 hover:text-primary-800"
                         title="Voir details"
                       >

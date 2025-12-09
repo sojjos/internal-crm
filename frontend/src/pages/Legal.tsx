@@ -388,7 +388,11 @@ export default function Legal() {
                             </span>
                           </td>
                           <td className="py-3">
-                            <button className="text-primary-600 hover:text-primary-800">
+                            <button
+                              onClick={() => alert('Téléchargement du rapport à implémenter')}
+                              className="text-primary-600 hover:text-primary-800"
+                              title="Télécharger le rapport"
+                            >
                               <DocumentArrowDownIcon className="h-5 w-5" />
                             </button>
                           </td>
