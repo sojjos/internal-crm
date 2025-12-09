@@ -44,7 +44,9 @@ apt install -y \
     python3 python3-pip python3-venv \
     build-essential libpq-dev \
     postgresql postgresql-contrib \
-    supervisor ufw
+    supervisor ufw \
+    libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 \
+    libffi-dev libcairo2 libgirepository1.0-dev gir1.2-pango-1.0
 
 # =============================================================================
 # 3. Installation de Node.js 20.x
