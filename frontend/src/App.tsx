@@ -29,6 +29,15 @@ import PurchaseForm from './pages/PurchaseForm'
 import Contracts from './pages/Contracts'
 import ContractForm from './pages/ContractForm'
 import FixedAssets from './pages/FixedAssets'
+import Documents from './pages/Documents'
+import Treasury from './pages/Treasury'
+import Stock from './pages/Stock'
+import Interventions from './pages/Interventions'
+import InterventionForm from './pages/InterventionForm'
+import Quotes from './pages/Quotes'
+import QuoteForm from './pages/QuoteForm'
+import CRM from './pages/CRM'
+import OpportunityForm from './pages/OpportunityForm'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -123,6 +132,30 @@ export default function App() {
         <Route path="emails" element={<Emails />} />
         <Route path="emails/compose" element={<EmailCompose />} />
         <Route path="emails/settings" element={<EmailSettings />} />
+
+        {/* Documents GED */}
+        <Route path="documents" element={<Documents />} />
+
+        {/* Treasury */}
+        <Route path="treasury" element={<Treasury />} />
+
+        {/* Stock */}
+        <Route path="stock" element={<Stock />} />
+
+        {/* Interventions */}
+        <Route path="interventions" element={<Interventions />} />
+        <Route path="interventions/new" element={<InterventionForm />} />
+        <Route path="interventions/:id" element={<InterventionForm />} />
+
+        {/* Quotes */}
+        <Route path="quotes" element={<Quotes />} />
+        <Route path="quotes/new" element={<QuoteForm />} />
+        <Route path="quotes/:id" element={<QuoteForm />} />
+
+        {/* CRM */}
+        <Route path="crm" element={<CRM />} />
+        <Route path="crm/opportunities/new" element={<OpportunityForm />} />
+        <Route path="crm/opportunities/:id" element={<OpportunityForm />} />
       </Route>
 
       {/* Catch all */}
