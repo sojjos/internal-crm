@@ -87,7 +87,18 @@ export default function QuoteForm() {
         terms: data.terms || '',
       })
 
-      setLines(data.lines || [])
+      // Convert decimal strings to numbers
+      const loadedLines = (data.lines || []).map((line: any) => ({
+        ...line,
+        quantity: parseFloat(line.quantity) || 1,
+        unit_price_htva: parseFloat(line.unit_price_htva) || 0,
+        vat_rate: parseFloat(line.vat_rate) || 21,
+        discount_percent: parseFloat(line.discount_percent) || 0,
+        total_htva: parseFloat(line.total_htva) || 0,
+        total_vat: parseFloat(line.total_vat) || 0,
+        total_tvac: parseFloat(line.total_tvac) || 0,
+      }))
+      setLines(loadedLines)
     } catch (error) {
       toast.error('Erreur lors du chargement')
       navigate('/quotes')
@@ -149,16 +160,19 @@ export default function QuoteForm() {
       const article = articles.find(a => a.id === parseInt(value))
       if (article) {
         newLines[index].description = article.name
-        newLines[index].unit_price_htva = article.unit_price
-        newLines[index].vat_rate = article.vat_rate
+        newLines[index].unit_price_htva = article.unit_price || 0
+        newLines[index].vat_rate = article.vat_rate || 21
       }
     }
 
     if (['quantity', 'unit_price_htva', 'discount_percent'].includes(field)) {
       const line = newLines[index]
-      const subtotal = line.quantity * line.unit_price_htva
-      const discount = subtotal * (line.discount_percent / 100)
-      newLines[index].total_htva = subtotal - discount
+      const qty = Number(line.quantity) || 0
+      const price = Number(line.unit_price_htva) || 0
+      const discount = Number(line.discount_percent) || 0
+      const subtotal = qty * price
+      const discountAmount = subtotal * (discount / 100)
+      newLines[index].total_htva = subtotal - discountAmount
     }
 
     setLines(newLines)
@@ -204,8 +218,8 @@ export default function QuoteForm() {
     }).format(amount)
   }
 
-  const totalHtva = lines.reduce((sum, l) => sum + l.total_htva, 0)
-  const totalVat = lines.reduce((sum, l) => sum + (l.total_htva * l.vat_rate / 100), 0)
+  const totalHtva = lines.reduce((sum, l) => sum + (Number(l.total_htva) || 0), 0)
+  const totalVat = lines.reduce((sum, l) => sum + ((Number(l.total_htva) || 0) * (Number(l.vat_rate) || 0) / 100), 0)
   const totalTtc = totalHtva + totalVat
 
   if (loading && isEdit) {
