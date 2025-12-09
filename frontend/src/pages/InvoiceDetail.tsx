@@ -125,6 +125,27 @@ export default function InvoiceDetail() {
     }
   }
 
+  const handleDownloadPdf = async () => {
+    setActionLoading(true)
+    try {
+      const response = await invoicesApi.downloadPdf(Number(id))
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `facture_${invoice?.invoice_number.replace('/', '-')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success('PDF téléchargé')
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Erreur lors du téléchargement du PDF')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('fr-BE')
   }
@@ -295,15 +316,14 @@ export default function InvoiceDetail() {
           {invoice.pdf_path && (
             <div className="card">
               <h2 className="text-lg font-semibold mb-4">Documents</h2>
-              <a
-                href={`/uploads/invoices/${invoice.pdf_path.split('/').pop()}`}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={handleDownloadPdf}
+                disabled={actionLoading}
                 className="btn-secondary w-full flex items-center justify-center"
               >
                 <DocumentArrowDownIcon className="h-5 w-5 mr-1" />
-                Télécharger PDF
-              </a>
+                {actionLoading ? 'Téléchargement...' : 'Télécharger PDF'}
+              </button>
             </div>
           )}
         </div>

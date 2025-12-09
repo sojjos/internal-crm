@@ -53,7 +53,8 @@ def generate_invoice_pdf(invoice: "Invoice", company: "CompanySettings") -> str:
 
     HTML(string=html_content).write_pdf(filepath)
 
-    return filepath
+    # Return relative path for URL access
+    return f"invoices/{filename}"
 
 
 def generate_invoice_html(invoice: "Invoice", company: "CompanySettings") -> str:

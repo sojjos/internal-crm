@@ -5,6 +5,7 @@ import os
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_db, get_current_user
@@ -19,6 +20,7 @@ from app.schemas.invoice import (
 from app.services.pdf_service import generate_invoice_pdf
 from app.services.email_service import send_invoice_email
 from app.services.peppol_service import generate_ubl_invoice, send_peppol_invoice
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -279,6 +281,44 @@ def generate_pdf(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate PDF: {str(e)}"
         )
+
+
+@router.get("/{invoice_id}/download-pdf")
+def download_pdf(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """Download PDF for an invoice."""
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+
+    if not invoice:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invoice not found"
+        )
+
+    if not invoice.pdf_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PDF not generated yet. Please generate the PDF first."
+        )
+
+    # Build full file path
+    file_path = os.path.join(settings.UPLOAD_DIR, invoice.pdf_path)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PDF file not found on server"
+        )
+
+    filename = f"facture_{invoice.invoice_number.replace('/', '-')}.pdf"
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="application/pdf"
+    )
 
 
 @router.post("/{invoice_id}/send")

@@ -91,6 +91,7 @@ export const invoicesApi = {
   update: (id: number, data: any) => api.put(`/invoices/${id}`, data),
   delete: (id: number) => api.delete(`/invoices/${id}`),
   generatePdf: (id: number) => api.post(`/invoices/${id}/generate-pdf`),
+  downloadPdf: (id: number) => api.get(`/invoices/${id}/download-pdf`, { responseType: 'blob' }),
   send: (id: number, params?: any) => api.post(`/invoices/${id}/send`, null, { params }),
   markPaid: (id: number, data?: any) => api.post(`/invoices/${id}/mark-paid`, null, { params: data }),
 }
