@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import api from '../services/api'
 
 interface User {
@@ -7,14 +6,19 @@ interface User {
   email: string
   first_name: string
   last_name: string
+  phone?: string
   is_active: boolean
+  is_admin?: boolean
+  last_login?: string
+  created_at?: string
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<User>
   logout: () => void
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -22,7 +26,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
     // Check if user is logged in
@@ -47,29 +50,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const login = async (email: string, password: string) => {
-    const formData = new FormData()
-    formData.append('username', email)
-    formData.append('password', password)
+  const login = useCallback(async (email: string, password: string): Promise<User> => {
+    const params = new URLSearchParams()
+    params.append('username', email)
+    params.append('password', password)
 
-    const response = await api.post('/auth/login', formData)
+    const response = await api.post('/auth/login', params, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    })
     const { access_token, user: userData } = response.data
 
     localStorage.setItem('token', access_token)
     api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
     setUser(userData)
-    navigate('/')
-  }
+    return userData
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token')
     delete api.defaults.headers.common['Authorization']
     setUser(null)
-    navigate('/login')
-  }
+  }, [])
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await api.get('/auth/me')
+      setUser(response.data)
+    } catch (error) {
+      console.error('Error refreshing user:', error)
+    }
+  }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

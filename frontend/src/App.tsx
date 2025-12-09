@@ -21,6 +21,23 @@ import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import Users from './pages/Users'
 import UserForm from './pages/UserForm'
+import Emails from './pages/Emails'
+import EmailCompose from './pages/EmailCompose'
+import EmailSettings from './pages/EmailSettings'
+import Purchases from './pages/Purchases'
+import PurchaseForm from './pages/PurchaseForm'
+import Contracts from './pages/Contracts'
+import ContractForm from './pages/ContractForm'
+import FixedAssets from './pages/FixedAssets'
+import Documents from './pages/Documents'
+import Treasury from './pages/Treasury'
+import Stock from './pages/Stock'
+import Interventions from './pages/Interventions'
+import InterventionForm from './pages/InterventionForm'
+import Quotes from './pages/Quotes'
+import QuoteForm from './pages/QuoteForm'
+import CRM from './pages/CRM'
+import OpportunityForm from './pages/OpportunityForm'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -76,6 +93,17 @@ export default function App() {
         <Route path="invoices/:id" element={<InvoiceDetail />} />
         <Route path="invoices/:id/edit" element={<InvoiceForm />} />
 
+        {/* Purchases */}
+        <Route path="purchases" element={<Purchases />} />
+        <Route path="purchases/new" element={<PurchaseForm />} />
+        <Route path="purchases/:id" element={<PurchaseForm />} />
+        <Route path="purchases/contracts" element={<Contracts />} />
+        <Route path="purchases/contracts/new" element={<ContractForm />} />
+        <Route path="purchases/contracts/:id" element={<ContractForm />} />
+        <Route path="purchases/assets" element={<FixedAssets />} />
+        <Route path="purchases/assets/new" element={<PurchaseForm />} />
+        <Route path="purchases/assets/:id" element={<FixedAssets />} />
+
         {/* Expenses */}
         <Route path="expenses" element={<Expenses />} />
         <Route path="expenses/new" element={<ExpenseForm />} />
@@ -99,6 +127,35 @@ export default function App() {
         <Route path="users" element={<Users />} />
         <Route path="users/new" element={<UserForm />} />
         <Route path="users/:id" element={<UserForm />} />
+
+        {/* Emails */}
+        <Route path="emails" element={<Emails />} />
+        <Route path="emails/compose" element={<EmailCompose />} />
+        <Route path="emails/settings" element={<EmailSettings />} />
+
+        {/* Documents GED */}
+        <Route path="documents" element={<Documents />} />
+
+        {/* Treasury */}
+        <Route path="treasury" element={<Treasury />} />
+
+        {/* Stock */}
+        <Route path="stock" element={<Stock />} />
+
+        {/* Interventions */}
+        <Route path="interventions" element={<Interventions />} />
+        <Route path="interventions/new" element={<InterventionForm />} />
+        <Route path="interventions/:id" element={<InterventionForm />} />
+
+        {/* Quotes */}
+        <Route path="quotes" element={<Quotes />} />
+        <Route path="quotes/new" element={<QuoteForm />} />
+        <Route path="quotes/:id" element={<QuoteForm />} />
+
+        {/* CRM */}
+        <Route path="crm" element={<CRM />} />
+        <Route path="crm/opportunities/new" element={<OpportunityForm />} />
+        <Route path="crm/opportunities/:id" element={<OpportunityForm />} />
       </Route>
 
       {/* Catch all */}

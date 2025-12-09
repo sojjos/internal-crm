@@ -7,6 +7,20 @@ from app.models.article import Article
 from app.models.invoice import Invoice, InvoiceLine
 from app.models.expense import Expense, ExpenseType
 from app.models.collaborator import Collaborator, PayrollPeriod, Payslip
+from app.models.email import EmailAccount, Email, EmailTemplate
+from app.models.purchase import (
+    PurchaseCategory, PurchaseContract, Purchase, FixedAsset, DepreciationEntry
+)
+from app.models.document import Document, DocumentCategory
+from app.models.treasury import BankAccount, CashFlowTransaction
+from app.models.stock import (
+    StockLocation, StockCategory, StockArticle, StockItem, StockMovement
+)
+from app.models.quote import Quote, QuoteLine
+from app.models.intervention import Intervention, InterventionLine
+from app.models.crm import (
+    ClientTag, ClientTagAssociation, Opportunity, ContactActivity, CRMTask
+)
 
 __all__ = [
     "User",
@@ -21,4 +35,36 @@ __all__ = [
     "Collaborator",
     "PayrollPeriod",
     "Payslip",
+    "EmailAccount",
+    "Email",
+    "EmailTemplate",
+    "PurchaseCategory",
+    "PurchaseContract",
+    "Purchase",
+    "FixedAsset",
+    "DepreciationEntry",
+    # Document management
+    "Document",
+    "DocumentCategory",
+    # Treasury
+    "BankAccount",
+    "CashFlowTransaction",
+    # Stock
+    "StockLocation",
+    "StockCategory",
+    "StockArticle",
+    "StockItem",
+    "StockMovement",
+    # Quotes
+    "Quote",
+    "QuoteLine",
+    # Interventions
+    "Intervention",
+    "InterventionLine",
+    # CRM
+    "ClientTag",
+    "ClientTagAssociation",
+    "Opportunity",
+    "ContactActivity",
+    "CRMTask",
 ]

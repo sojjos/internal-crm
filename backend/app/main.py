@@ -10,7 +10,8 @@ from app.core.config import settings
 from app.db.database import Base, engine
 from app.api.routes import (
     auth, users, company, clients, suppliers,
-    articles, invoices, expenses, collaborators, reports, peppol
+    articles, invoices, expenses, collaborators, reports, peppol, emails, purchases,
+    documents, treasury, stock, interventions, quotes, crm
 )
 
 
@@ -27,6 +28,9 @@ async def lifespan(app: FastAPI):
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "invoices"), exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "receipts"), exist_ok=True)
     os.makedirs(os.path.join(settings.UPLOAD_DIR, "payslips"), exist_ok=True)
+    os.makedirs(os.path.join(settings.UPLOAD_DIR, "purchases"), exist_ok=True)
+    os.makedirs(os.path.join(settings.UPLOAD_DIR, "documents"), exist_ok=True)
+    os.makedirs(os.path.join(settings.UPLOAD_DIR, "interventions"), exist_ok=True)
 
     yield
 
@@ -67,6 +71,14 @@ app.include_router(expenses.router, prefix="/api/expenses", tags=["Expenses"])
 app.include_router(collaborators.router, prefix="/api/collaborators", tags=["Collaborators & Payroll"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports & Exports"])
 app.include_router(peppol.router, prefix="/api/peppol", tags=["Peppol Directory"])
+app.include_router(emails.router, prefix="/api/emails", tags=["Email Client"])
+app.include_router(purchases.router, prefix="/api/purchases", tags=["Purchases & Investments"])
+app.include_router(documents.router, prefix="/api/documents", tags=["Documents GED"])
+app.include_router(treasury.router, prefix="/api/treasury", tags=["Treasury & Cashflow"])
+app.include_router(stock.router, prefix="/api/stock", tags=["Stock Management"])
+app.include_router(interventions.router, prefix="/api/interventions", tags=["Interventions & Planning"])
+app.include_router(quotes.router, prefix="/api/quotes", tags=["Quotes"])
+app.include_router(crm.router, prefix="/api/crm", tags=["CRM & Pipeline"])
 
 
 @app.get("/api/health")

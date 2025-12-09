@@ -40,6 +40,12 @@ export const authApi = {
   },
   me: () => api.get('/auth/me'),
   register: (data: any) => api.post('/auth/register', data),
+  updateProfile: (data: any) => api.put('/auth/me', data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post('/auth/me/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
 }
 
 export const companyApi = {
@@ -161,4 +167,257 @@ export const usersApi = {
   get: (id: number) => api.get(`/users/${id}`),
   update: (id: number, data: any) => api.put(`/users/${id}`, data),
   delete: (id: number) => api.delete(`/users/${id}`),
+}
+
+export const emailsApi = {
+  // Accounts
+  accounts: {
+    list: () => api.get('/emails/accounts'),
+    get: (id: number) => api.get(`/emails/accounts/${id}`),
+    create: (data: any) => api.post('/emails/accounts', data),
+    update: (id: number, data: any) => api.put(`/emails/accounts/${id}`, data),
+    delete: (id: number) => api.delete(`/emails/accounts/${id}`),
+    test: (data: any) => api.post('/emails/accounts/test', data),
+  },
+  // Emails
+  list: (params?: any) => api.get('/emails', { params }),
+  get: (id: number) => api.get(`/emails/${id}`),
+  send: (data: FormData) => api.post('/emails/send', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  markRead: (id: number, isRead: boolean = true) =>
+    api.post(`/emails/${id}/mark-read`, null, { params: { is_read: isRead } }),
+  star: (id: number) => api.post(`/emails/${id}/star`),
+  delete: (id: number) => api.delete(`/emails/${id}`),
+  sync: (accountId: number, folder: string = 'INBOX') =>
+    api.post('/emails/sync', { account_id: accountId, folder }),
+  folders: (accountId: number) => api.get('/emails/folders', { params: { account_id: accountId } }),
+  // Templates
+  templates: {
+    list: (templateType?: string) => api.get('/emails/templates', { params: { template_type: templateType } }),
+    create: (data: any) => api.post('/emails/templates', data),
+    update: (id: number, data: any) => api.put(`/emails/templates/${id}`, data),
+    delete: (id: number) => api.delete(`/emails/templates/${id}`),
+  },
+}
+
+export const purchasesApi = {
+  // Categories
+  categories: {
+    list: (params?: any) => api.get('/purchases/categories', { params }),
+    get: (id: number) => api.get(`/purchases/categories/${id}`),
+    create: (data: any) => api.post('/purchases/categories', data),
+    update: (id: number, data: any) => api.put(`/purchases/categories/${id}`, data),
+    delete: (id: number) => api.delete(`/purchases/categories/${id}`),
+    getDefaults: (id: number) => api.get(`/purchases/categories/${id}/defaults`),
+  },
+  // Contracts
+  contracts: {
+    list: (params?: any) => api.get('/purchases/contracts', { params }),
+    get: (id: number) => api.get(`/purchases/contracts/${id}`),
+    create: (data: any) => api.post('/purchases/contracts', data),
+    update: (id: number, data: any) => api.put(`/purchases/contracts/${id}`, data),
+    delete: (id: number) => api.delete(`/purchases/contracts/${id}`),
+    billingDates: (id: number) => api.get(`/purchases/contracts/${id}/billing-dates`),
+    generatePurchases: (forDate: string) =>
+      api.post('/purchases/contracts/generate-purchases', null, { params: { for_date: forDate } }),
+  },
+  // Purchases
+  list: (params?: any) => api.get('/purchases', { params }),
+  get: (id: number) => api.get(`/purchases/${id}`),
+  create: (data: any) => api.post('/purchases', data),
+  update: (id: number, data: any) => api.put(`/purchases/${id}`, data),
+  delete: (id: number) => api.delete(`/purchases/${id}`),
+  validate: (id: number) => api.post(`/purchases/${id}/validate`),
+  uploadDocument: (id: number, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post(`/purchases/${id}/document`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  calculate: (data: any) => api.post('/purchases/calculate', data),
+  // Fixed Assets
+  assets: {
+    list: (params?: any) => api.get('/purchases/assets', { params }),
+    get: (id: number) => api.get(`/purchases/assets/${id}`),
+    create: (data: any) => api.post('/purchases/assets', data),
+    update: (id: number, data: any) => api.put(`/purchases/assets/${id}`, data),
+    delete: (id: number) => api.delete(`/purchases/assets/${id}`),
+    regenerateDepreciation: (id: number) => api.post(`/purchases/assets/${id}/regenerate-depreciation`),
+  },
+  // Reports
+  reports: {
+    summary: (startDate: string, endDate: string) =>
+      api.get('/purchases/reports/summary', { params: { start_date: startDate, end_date: endDate } }),
+    vat: (startDate: string, endDate: string) =>
+      api.get('/purchases/reports/vat', { params: { start_date: startDate, end_date: endDate } }),
+    pcmn: (startDate: string, endDate: string) =>
+      api.get('/purchases/reports/pcmn', { params: { start_date: startDate, end_date: endDate } }),
+    investments: (asOfDate: string) =>
+      api.get('/purchases/reports/investments', { params: { as_of_date: asOfDate } }),
+  },
+}
+
+// Document Management (GED)
+export const documentsApi = {
+  categories: {
+    list: (params?: any) => api.get('/documents/categories', { params }),
+    create: (data: any) => api.post('/documents/categories', data),
+    update: (id: number, data: any) => api.put(`/documents/categories/${id}`, data),
+    delete: (id: number) => api.delete(`/documents/categories/${id}`),
+  },
+  list: (params?: any) => api.get('/documents', { params }),
+  get: (id: number) => api.get(`/documents/${id}`),
+  create: (data: FormData) => api.post('/documents', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  update: (id: number, data: any) => api.put(`/documents/${id}`, data),
+  delete: (id: number) => api.delete(`/documents/${id}`),
+  expiring: (days: number = 30) => api.get('/documents/expiring', { params: { days } }),
+}
+
+// Treasury & Cashflow
+export const treasuryApi = {
+  accounts: {
+    list: (params?: any) => api.get('/treasury/accounts', { params }),
+    get: (id: number) => api.get(`/treasury/accounts/${id}`),
+    create: (data: any) => api.post('/treasury/accounts', data),
+    update: (id: number, data: any) => api.put(`/treasury/accounts/${id}`, data),
+    delete: (id: number) => api.delete(`/treasury/accounts/${id}`),
+  },
+  transactions: {
+    list: (params?: any) => api.get('/treasury/transactions', { params }),
+    get: (id: number) => api.get(`/treasury/transactions/${id}`),
+    create: (data: any) => api.post('/treasury/transactions', data),
+    update: (id: number, data: any) => api.put(`/treasury/transactions/${id}`, data),
+    delete: (id: number) => api.delete(`/treasury/transactions/${id}`),
+  },
+  forecast: (accountId: number, months: number = 3) =>
+    api.get('/treasury/forecast', { params: { account_id: accountId, months } }),
+  weeklyForecast: (accountId: number, weeks: number = 8) =>
+    api.get('/treasury/weekly-forecast', { params: { account_id: accountId, weeks } }),
+  syncFromInvoices: (accountId: number) =>
+    api.post('/treasury/sync-from-invoices', null, { params: { account_id: accountId } }),
+}
+
+// Stock Management
+export const stockApi = {
+  locations: {
+    list: (params?: any) => api.get('/stock/locations', { params }),
+    get: (id: number) => api.get(`/stock/locations/${id}`),
+    create: (data: any) => api.post('/stock/locations', data),
+    update: (id: number, data: any) => api.put(`/stock/locations/${id}`, data),
+    delete: (id: number) => api.delete(`/stock/locations/${id}`),
+  },
+  categories: {
+    list: (params?: any) => api.get('/stock/categories', { params }),
+    get: (id: number) => api.get(`/stock/categories/${id}`),
+    create: (data: any) => api.post('/stock/categories', data),
+    update: (id: number, data: any) => api.put(`/stock/categories/${id}`, data),
+    delete: (id: number) => api.delete(`/stock/categories/${id}`),
+  },
+  articles: {
+    list: (params?: any) => api.get('/stock/articles', { params }),
+    get: (id: number) => api.get(`/stock/articles/${id}`),
+    create: (data: any) => api.post('/stock/articles', data),
+    update: (id: number, data: any) => api.put(`/stock/articles/${id}`, data),
+    delete: (id: number) => api.delete(`/stock/articles/${id}`),
+  },
+  items: {
+    list: (params?: any) => api.get('/stock/items', { params }),
+    get: (id: number) => api.get(`/stock/items/${id}`),
+    create: (data: any) => api.post('/stock/items', data),
+    update: (id: number, data: any) => api.put(`/stock/items/${id}`, data),
+    delete: (id: number) => api.delete(`/stock/items/${id}`),
+  },
+  movements: {
+    list: (params?: any) => api.get('/stock/movements', { params }),
+    create: (data: any) => api.post('/stock/movements', data),
+  },
+  alerts: () => api.get('/stock/alerts'),
+}
+
+// Interventions & Planning
+export const interventionsApi = {
+  list: (params?: any) => api.get('/interventions', { params }),
+  get: (id: number) => api.get(`/interventions/${id}`),
+  create: (data: any) => api.post('/interventions', data),
+  update: (id: number, data: any) => api.put(`/interventions/${id}`, data),
+  delete: (id: number) => api.delete(`/interventions/${id}`),
+  start: (id: number) => api.post(`/interventions/${id}/start`),
+  complete: (id: number, data?: any) => api.post(`/interventions/${id}/complete`, data),
+  createInvoice: (id: number) => api.post(`/interventions/${id}/create-invoice`),
+  calendar: (params?: any) => api.get('/interventions/calendar', { params }),
+  lines: {
+    add: (interventionId: number, data: any) =>
+      api.post(`/interventions/${interventionId}/lines`, data),
+    update: (interventionId: number, lineId: number, data: any) =>
+      api.put(`/interventions/${interventionId}/lines/${lineId}`, data),
+    delete: (interventionId: number, lineId: number) =>
+      api.delete(`/interventions/${interventionId}/lines/${lineId}`),
+  },
+}
+
+// Quotes (Devis)
+export const quotesApi = {
+  list: (params?: any) => api.get('/quotes', { params }),
+  get: (id: number) => api.get(`/quotes/${id}`),
+  create: (data: any) => api.post('/quotes', data),
+  update: (id: number, data: any) => api.put(`/quotes/${id}`, data),
+  delete: (id: number) => api.delete(`/quotes/${id}`),
+  send: (id: number) => api.post(`/quotes/${id}/send`),
+  accept: (id: number) => api.post(`/quotes/${id}/accept`),
+  reject: (id: number, reason?: string) =>
+    api.post(`/quotes/${id}/reject`, null, { params: { reason } }),
+  convertToInvoice: (id: number, data?: any) =>
+    api.post(`/quotes/${id}/convert-to-invoice`, data),
+  lines: {
+    add: (quoteId: number, data: any) => api.post(`/quotes/${quoteId}/lines`, data),
+    update: (quoteId: number, lineId: number, data: any) =>
+      api.put(`/quotes/${quoteId}/lines/${lineId}`, data),
+    delete: (quoteId: number, lineId: number) =>
+      api.delete(`/quotes/${quoteId}/lines/${lineId}`),
+  },
+}
+
+// CRM & Pipeline
+export const crmApi = {
+  tags: {
+    list: (params?: any) => api.get('/crm/tags', { params }),
+    create: (data: any) => api.post('/crm/tags', data),
+    update: (id: number, data: any) => api.put(`/crm/tags/${id}`, data),
+    delete: (id: number) => api.delete(`/crm/tags/${id}`),
+    assign: (tagId: number, clientId: number) =>
+      api.post(`/crm/tags/${tagId}/clients/${clientId}`),
+    remove: (tagId: number, clientId: number) =>
+      api.delete(`/crm/tags/${tagId}/clients/${clientId}`),
+  },
+  opportunities: {
+    list: (params?: any) => api.get('/crm/opportunities', { params }),
+    get: (id: number) => api.get(`/crm/opportunities/${id}`),
+    create: (data: any) => api.post('/crm/opportunities', data),
+    update: (id: number, data: any) => api.put(`/crm/opportunities/${id}`, data),
+    delete: (id: number) => api.delete(`/crm/opportunities/${id}`),
+    updateStage: (id: number, stage: string) =>
+      api.put(`/crm/opportunities/${id}/stage`, null, { params: { stage } }),
+  },
+  activities: {
+    list: (params?: any) => api.get('/crm/activities', { params }),
+    create: (data: any) => api.post('/crm/activities', data),
+    delete: (id: number) => api.delete(`/crm/activities/${id}`),
+  },
+  tasks: {
+    list: (params?: any) => api.get('/crm/tasks', { params }),
+    get: (id: number) => api.get(`/crm/tasks/${id}`),
+    create: (data: any) => api.post('/crm/tasks', data),
+    update: (id: number, data: any) => api.put(`/crm/tasks/${id}`, data),
+    delete: (id: number) => api.delete(`/crm/tasks/${id}`),
+    complete: (id: number, notes?: string) =>
+      api.post(`/crm/tasks/${id}/complete`, null, { params: { notes } }),
+  },
+  dashboard: () => api.get('/crm/dashboard'),
+  pipeline: () => api.get('/crm/pipeline'),
+  convertToClient: (opportunityId: number) =>
+    api.post(`/crm/opportunities/${opportunityId}/convert-to-client`),
 }
