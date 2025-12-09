@@ -11,7 +11,8 @@ from app.db.database import Base, engine
 from app.api.routes import (
     auth, users, company, clients, suppliers,
     articles, invoices, expenses, collaborators, reports, peppol, emails, purchases,
-    documents, treasury, stock, interventions, quotes, crm
+    documents, treasury, stock, interventions, quotes, crm,
+    annual_accounts, fiscal, legal, integrations
 )
 
 
@@ -79,6 +80,10 @@ app.include_router(stock.router, prefix="/api/stock", tags=["Stock Management"])
 app.include_router(interventions.router, prefix="/api/interventions", tags=["Interventions & Planning"])
 app.include_router(quotes.router, prefix="/api/quotes", tags=["Quotes"])
 app.include_router(crm.router, prefix="/api/crm", tags=["CRM & Pipeline"])
+app.include_router(annual_accounts.router, prefix="/api/annual-accounts", tags=["Annual Accounts & XBRL"])
+app.include_router(fiscal.router, prefix="/api/fiscal", tags=["Fiscal & ISoc"])
+app.include_router(legal.router, prefix="/api/legal", tags=["Legal Documents"])
+app.include_router(integrations.router, prefix="/api/integrations", tags=["Integrations"])
 
 
 @app.get("/api/health")

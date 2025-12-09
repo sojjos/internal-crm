@@ -23,6 +23,10 @@ import {
   WrenchScrewdriverIcon,
   ClipboardDocumentListIcon,
   FunnelIcon,
+  CalculatorIcon,
+  ScaleIcon,
+  BuildingLibraryIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline'
 
 const navigation = [
@@ -43,7 +47,11 @@ const navigation = [
   { name: 'Collaborateurs', href: '/collaborators', icon: UserGroupIcon },
   { name: 'Paie', href: '/payroll', icon: ShoppingBagIcon },
   { name: 'Rapports', href: '/reports', icon: ChartBarIcon },
-  { name: 'Paramètres', href: '/settings', icon: CogIcon },
+  { name: 'Comptes Annuels', href: '/annual-accounts', icon: CalculatorIcon },
+  { name: 'Fiscal', href: '/fiscal', icon: ScaleIcon },
+  { name: 'Juridique', href: '/legal', icon: BuildingLibraryIcon },
+  { name: 'Integrations', href: '/integrations', icon: LinkIcon },
+  { name: 'Parametres', href: '/settings', icon: CogIcon },
   { name: 'Utilisateurs', href: '/users', icon: UsersIcon },
 ]
 
