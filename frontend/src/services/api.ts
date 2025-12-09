@@ -373,6 +373,8 @@ export const quotesApi = {
     api.post(`/quotes/${id}/reject`, null, { params: { reason } }),
   convertToInvoice: (id: number, data?: any) =>
     api.post(`/quotes/${id}/convert-to-invoice`, data),
+  generatePdf: (id: number) => api.post(`/quotes/${id}/generate-pdf`),
+  downloadPdf: (id: number) => api.get(`/quotes/${id}/download-pdf`, { responseType: 'blob' }),
   lines: {
     add: (quoteId: number, data: any) => api.post(`/quotes/${quoteId}/lines`, data),
     update: (quoteId: number, lineId: number, data: any) =>

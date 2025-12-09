@@ -9,6 +9,7 @@ import {
   CheckIcon,
   XMarkIcon,
   DocumentDuplicateIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -27,6 +28,7 @@ interface Quote {
   converted_to_invoice_id: number | null
   sent_at: string | null
   accepted_at: string | null
+  pdf_path: string | null
 }
 
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -131,6 +133,30 @@ export default function Quotes() {
       loadQuotes()
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Erreur')
+    }
+  }
+
+  const handleDownloadPdf = async (quote: Quote) => {
+    try {
+      // Generate PDF first if not exists
+      if (!quote.pdf_path) {
+        await quotesApi.generatePdf(quote.id)
+      }
+
+      const response = await quotesApi.downloadPdf(quote.id)
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `devis_${quote.quote_number.replace(/\//g, '-')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success('PDF telecharge')
+      loadQuotes()
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Erreur lors du telechargement')
     }
   }
 
@@ -351,6 +377,13 @@ export default function Quotes() {
                           <PencilIcon className="h-5 w-5" />
                         </Link>
                       )}
+                      <button
+                        onClick={() => handleDownloadPdf(quote)}
+                        className="text-green-600 hover:text-green-800"
+                        title="Telecharger PDF"
+                      >
+                        <ArrowDownTrayIcon className="h-5 w-5" />
+                      </button>
                     </div>
                   </td>
                 </tr>
