@@ -1,4 +1,5 @@
 """Quote (Devis) routes."""
+import os
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from typing import Any, List, Optional
@@ -519,20 +520,32 @@ def create_quote_document(db: Session, quote: Quote, pdf_path: str, user_id: int
         Document.document_type == DocumentType.DEVIS_CLIENT
     ).first()
 
+    # Get file info
+    full_path = os.path.join(settings.UPLOAD_DIR, pdf_path)
+    file_size = os.path.getsize(full_path) if os.path.exists(full_path) else 0
+    file_name = os.path.basename(pdf_path)
+
     if existing_doc:
         # Update existing document
         existing_doc.file_path = pdf_path
+        existing_doc.file_name = file_name
+        existing_doc.file_size = file_size
         existing_doc.updated_at = datetime.utcnow()
         return existing_doc
     else:
         # Create new document
         doc = Document(
-            name=f"Devis {quote.quote_number}",
+            title=f"Devis {quote.quote_number}",
+            description=f"Devis client {quote.quote_number}",
             document_type=DocumentType.DEVIS_CLIENT,
             file_path=pdf_path,
+            file_name=file_name,
+            file_size=file_size,
+            mime_type="application/pdf",
+            document_date=quote.quote_date,
             quote_id=quote.id,
             client_id=quote.client_id,
-            uploaded_by_id=user_id
+            created_by_id=user_id
         )
         db.add(doc)
         return doc
