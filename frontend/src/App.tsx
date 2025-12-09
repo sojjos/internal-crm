@@ -38,6 +38,10 @@ import Quotes from './pages/Quotes'
 import QuoteForm from './pages/QuoteForm'
 import CRM from './pages/CRM'
 import OpportunityForm from './pages/OpportunityForm'
+import AnnualAccounts from './pages/AnnualAccounts'
+import Fiscal from './pages/Fiscal'
+import Legal from './pages/Legal'
+import Integrations from './pages/Integrations'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -156,6 +160,18 @@ export default function App() {
         <Route path="crm" element={<CRM />} />
         <Route path="crm/opportunities/new" element={<OpportunityForm />} />
         <Route path="crm/opportunities/:id" element={<OpportunityForm />} />
+
+        {/* Annual Accounts */}
+        <Route path="annual-accounts" element={<AnnualAccounts />} />
+
+        {/* Fiscal */}
+        <Route path="fiscal" element={<Fiscal />} />
+
+        {/* Legal */}
+        <Route path="legal" element={<Legal />} />
+
+        {/* Integrations */}
+        <Route path="integrations" element={<Integrations />} />
       </Route>
 
       {/* Catch all */}

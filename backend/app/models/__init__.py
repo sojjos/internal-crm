@@ -21,6 +21,22 @@ from app.models.intervention import Intervention, InterventionLine
 from app.models.crm import (
     ClientTag, ClientTagAssociation, Opportunity, ContactActivity, CRMTask
 )
+from app.models.annual_accounts import (
+    FiscalYear, AnnualAccount, BalanceSheetItem, IncomeStatementItem,
+    AnnualAccountNote, AccountMapping
+)
+from app.models.fiscal import (
+    TaxDeclaration, ISocCalculation, TaxDeclarationItem, TaxMapping, Prepayment
+)
+from app.models.legal import (
+    BoardMeeting, MeetingResolution, LegalDocument, ManagementReport,
+    MoniteurPublication, CorporateOfficer, ShareRegister, UBORegister
+)
+from app.models.integrations import (
+    ExternalIntegration, BelcotaxDeclaration, BelcotaxFiche,
+    CasewareProject, CasewareSyncLog, AccountingImport, ImportedAccountingEntry,
+    CODAImport, CODAMovement
+)
 
 __all__ = [
     "User",
@@ -67,4 +83,36 @@ __all__ = [
     "Opportunity",
     "ContactActivity",
     "CRMTask",
+    # Annual Accounts
+    "FiscalYear",
+    "AnnualAccount",
+    "BalanceSheetItem",
+    "IncomeStatementItem",
+    "AnnualAccountNote",
+    "AccountMapping",
+    # Fiscal
+    "TaxDeclaration",
+    "ISocCalculation",
+    "TaxDeclarationItem",
+    "TaxMapping",
+    "Prepayment",
+    # Legal
+    "BoardMeeting",
+    "MeetingResolution",
+    "LegalDocument",
+    "ManagementReport",
+    "MoniteurPublication",
+    "CorporateOfficer",
+    "ShareRegister",
+    "UBORegister",
+    # Integrations
+    "ExternalIntegration",
+    "BelcotaxDeclaration",
+    "BelcotaxFiche",
+    "CasewareProject",
+    "CasewareSyncLog",
+    "AccountingImport",
+    "ImportedAccountingEntry",
+    "CODAImport",
+    "CODAMovement",
 ]

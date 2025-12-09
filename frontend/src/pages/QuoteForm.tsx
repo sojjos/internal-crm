@@ -9,10 +9,12 @@ interface QuoteLine {
   article_id: number | null
   description: string
   quantity: number
-  unit_price: number
+  unit_price_htva: number
   vat_rate: number
   discount_percent: number
   total_htva: number
+  total_vat?: number
+  total_tvac?: number
 }
 
 interface Article {
@@ -36,7 +38,7 @@ export default function QuoteForm() {
     client_id: '',
     subject: '',
     quote_date: new Date().toISOString().split('T')[0],
-    valid_until: '',
+    validity_date: '',
     notes: '',
     terms: '',
   })
@@ -46,9 +48,9 @@ export default function QuoteForm() {
   useEffect(() => {
     loadInitialData()
     // Set default validity (30 days)
-    const validUntil = new Date()
-    validUntil.setDate(validUntil.getDate() + 30)
-    setForm(f => ({ ...f, valid_until: validUntil.toISOString().split('T')[0] }))
+    const validityDate = new Date()
+    validityDate.setDate(validityDate.getDate() + 30)
+    setForm(f => ({ ...f, validity_date: validityDate.toISOString().split('T')[0] }))
   }, [])
 
   useEffect(() => {
@@ -78,9 +80,9 @@ export default function QuoteForm() {
 
       setForm({
         client_id: data.client_id.toString(),
-        subject: data.subject,
+        subject: data.subject || '',
         quote_date: data.quote_date,
-        valid_until: data.valid_until,
+        validity_date: data.validity_date || '',
         notes: data.notes || '',
         terms: data.terms || '',
       })
@@ -131,7 +133,7 @@ export default function QuoteForm() {
         article_id: null,
         description: '',
         quantity: 1,
-        unit_price: 0,
+        unit_price_htva: 0,
         vat_rate: 21,
         discount_percent: 0,
         total_htva: 0,
@@ -147,14 +149,14 @@ export default function QuoteForm() {
       const article = articles.find(a => a.id === parseInt(value))
       if (article) {
         newLines[index].description = article.name
-        newLines[index].unit_price = article.unit_price
+        newLines[index].unit_price_htva = article.unit_price
         newLines[index].vat_rate = article.vat_rate
       }
     }
 
-    if (['quantity', 'unit_price', 'discount_percent'].includes(field)) {
+    if (['quantity', 'unit_price_htva', 'discount_percent'].includes(field)) {
       const line = newLines[index]
-      const subtotal = line.quantity * line.unit_price
+      const subtotal = line.quantity * line.unit_price_htva
       const discount = subtotal * (line.discount_percent / 100)
       newLines[index].total_htva = subtotal - discount
     }
@@ -267,8 +269,8 @@ export default function QuoteForm() {
               <label className="label">Valide jusqu'au *</label>
               <input
                 type="date"
-                value={form.valid_until}
-                onChange={(e) => setForm({ ...form, valid_until: e.target.value })}
+                value={form.validity_date}
+                onChange={(e) => setForm({ ...form, validity_date: e.target.value })}
                 className="input"
                 required
               />
@@ -365,8 +367,8 @@ export default function QuoteForm() {
                           type="number"
                           min="0"
                           step="0.01"
-                          value={line.unit_price}
-                          onChange={(e) => updateLine(index, 'unit_price', parseFloat(e.target.value))}
+                          value={line.unit_price_htva}
+                          onChange={(e) => updateLine(index, 'unit_price_htva', parseFloat(e.target.value))}
                           className="input text-sm"
                         />
                       </td>

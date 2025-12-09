@@ -91,6 +91,7 @@ export const invoicesApi = {
   update: (id: number, data: any) => api.put(`/invoices/${id}`, data),
   delete: (id: number) => api.delete(`/invoices/${id}`),
   generatePdf: (id: number) => api.post(`/invoices/${id}/generate-pdf`),
+  downloadPdf: (id: number) => api.get(`/invoices/${id}/download-pdf`, { responseType: 'blob' }),
   send: (id: number, params?: any) => api.post(`/invoices/${id}/send`, null, { params }),
   markPaid: (id: number, data?: any) => api.post(`/invoices/${id}/mark-paid`, null, { params: data }),
 }
@@ -420,4 +421,184 @@ export const crmApi = {
   pipeline: () => api.get('/crm/pipeline'),
   convertToClient: (opportunityId: number) =>
     api.post(`/crm/opportunities/${opportunityId}/convert-to-client`),
+}
+
+// Annual Accounts & XBRL
+export const annualAccountsApi = {
+  fiscalYears: {
+    list: () => api.get('/annual-accounts/fiscal-years'),
+    get: (id: number) => api.get(`/annual-accounts/fiscal-years/${id}`),
+    create: (data: any) => api.post('/annual-accounts/fiscal-years', data),
+    update: (id: number, data: any) => api.put(`/annual-accounts/fiscal-years/${id}`, data),
+    close: (id: number) => api.post(`/annual-accounts/fiscal-years/${id}/close`),
+  },
+  list: (params?: any) => api.get('/annual-accounts', { params }),
+  get: (id: number) => api.get(`/annual-accounts/${id}`),
+  create: (data: any) => api.post('/annual-accounts', data),
+  balanceSheet: (id: number) => api.get(`/annual-accounts/${id}/balance-sheet`),
+  updateBalanceSheetItem: (accountId: number, itemId: number, data: any) =>
+    api.put(`/annual-accounts/${accountId}/balance-sheet/${itemId}`, data),
+  incomeStatement: (id: number) => api.get(`/annual-accounts/${id}/income-statement`),
+  calculate: (id: number) => api.post(`/annual-accounts/${id}/calculate`),
+  validate: (id: number) => api.post(`/annual-accounts/${id}/validate`),
+  generateXbrl: (id: number) => api.post(`/annual-accounts/${id}/generate-xbrl`, null, {
+    responseType: 'blob',
+  }),
+  structure: {
+    balanceSheet: () => api.get('/annual-accounts/structure/balance-sheet'),
+    incomeStatement: () => api.get('/annual-accounts/structure/income-statement'),
+  },
+}
+
+// Fiscal & ISoc
+export const fiscalApi = {
+  declarations: {
+    list: (params?: any) => api.get('/fiscal/declarations', { params }),
+    get: (id: number) => api.get(`/fiscal/declarations/${id}`),
+    create: (data: any) => api.post('/fiscal/declarations', data),
+    delete: (id: number) => api.delete(`/fiscal/declarations/${id}`),
+    items: (id: number) => api.get(`/fiscal/declarations/${id}/items`),
+    submitBiztax: (id: number) => api.post(`/fiscal/declarations/${id}/biztax/submit`),
+  },
+  isoc: {
+    get: (declarationId: number) => api.get(`/fiscal/declarations/${declarationId}/isoc`),
+    update: (declarationId: number, data: any) =>
+      api.put(`/fiscal/declarations/${declarationId}/isoc`, data),
+    calculate: (declarationId: number) =>
+      api.post(`/fiscal/declarations/${declarationId}/isoc/calculate`),
+  },
+  prepayments: {
+    list: (params?: any) => api.get('/fiscal/prepayments', { params }),
+    create: (data: any) => api.post('/fiscal/prepayments', data),
+    update: (id: number, data: any) => api.put(`/fiscal/prepayments/${id}`, data),
+  },
+  mappings: {
+    list: (params?: any) => api.get('/fiscal/mappings', { params }),
+    create: (data: any) => api.post('/fiscal/mappings', data),
+    delete: (id: number) => api.delete(`/fiscal/mappings/${id}`),
+  },
+  dnaCategories: () => api.get('/fiscal/dna-categories'),
+  isocStructure: () => api.get('/fiscal/isoc-structure'),
+  prepaymentRates: () => api.get('/fiscal/prepayment-rates'),
+}
+
+// Legal Documents
+export const legalApi = {
+  meetings: {
+    list: (params?: any) => api.get('/legal/meetings', { params }),
+    get: (id: number) => api.get(`/legal/meetings/${id}`),
+    create: (data: any) => api.post('/legal/meetings', data),
+    update: (id: number, data: any) => api.put(`/legal/meetings/${id}`, data),
+    approve: (id: number, president: string, secretary: string) =>
+      api.post(`/legal/meetings/${id}/approve`, null, { params: { president_name: president, secretary_name: secretary } }),
+    generatePv: (id: number) => api.post(`/legal/meetings/${id}/generate-pv`, null, {
+      responseType: 'blob',
+    }),
+  },
+  resolutions: {
+    list: (meetingId: number) => api.get(`/legal/meetings/${meetingId}/resolutions`),
+    create: (meetingId: number, data: any) =>
+      api.post(`/legal/meetings/${meetingId}/resolutions`, data),
+    vote: (meetingId: number, resId: number, votesFor: number, votesAgainst: number, abstain: number = 0) =>
+      api.put(`/legal/meetings/${meetingId}/resolutions/${resId}/vote`, null, {
+        params: { votes_for: votesFor, votes_against: votesAgainst, votes_abstain: abstain }
+      }),
+  },
+  managementReports: {
+    list: (params?: any) => api.get('/legal/management-reports', { params }),
+    get: (id: number) => api.get(`/legal/management-reports/${id}`),
+    create: (data: any) => api.post('/legal/management-reports', data),
+    updateSection: (id: number, sectionName: string, content: string) =>
+      api.put(`/legal/management-reports/${id}/section`, null, {
+        params: { section_name: sectionName, content }
+      }),
+  },
+  officers: {
+    list: (params?: any) => api.get('/legal/officers', { params }),
+    create: (data: any) => api.post('/legal/officers', data),
+    update: (id: number, data: any) => api.put(`/legal/officers/${id}`, data),
+    endMandate: (id: number, endDate: string) =>
+      api.post(`/legal/officers/${id}/end-mandate`, null, { params: { end_date: endDate } }),
+  },
+  publications: {
+    list: (params?: any) => api.get('/legal/publications', { params }),
+    create: (data: any) => api.post('/legal/publications', data),
+    file: (id: number) => api.post(`/legal/publications/${id}/file`),
+  },
+  ubo: {
+    list: (params?: any) => api.get('/legal/ubo', { params }),
+    create: (data: any) => api.post('/legal/ubo', data),
+    declareSpf: (id: number) => api.post(`/legal/ubo/${id}/declare-spf`),
+  },
+  templates: () => api.get('/legal/templates'),
+  functions: () => api.get('/legal/functions'),
+}
+
+// Integrations (Belcotax, Caseware, Imports)
+export const integrationsApi = {
+  config: {
+    list: (params?: any) => api.get('/integrations/config', { params }),
+    create: (data: any) => api.post('/integrations/config', data),
+    update: (id: number, data: any) => api.put(`/integrations/config/${id}`, data),
+    test: (id: number) => api.post(`/integrations/config/${id}/test`),
+    activate: (id: number) => api.post(`/integrations/config/${id}/activate`),
+  },
+  belcotax: {
+    declarations: {
+      list: (params?: any) => api.get('/integrations/belcotax/declarations', { params }),
+      get: (id: number) => api.get(`/integrations/belcotax/declarations/${id}`),
+      create: (data: any) => api.post('/integrations/belcotax/declarations', data),
+      fiches: (declId: number) => api.get(`/integrations/belcotax/declarations/${declId}/fiches`),
+      addFiche: (declId: number, data: any) =>
+        api.post(`/integrations/belcotax/declarations/${declId}/fiches`, data),
+      validate: (declId: number) =>
+        api.post(`/integrations/belcotax/declarations/${declId}/validate`),
+      generateXml: (declId: number) =>
+        api.post(`/integrations/belcotax/declarations/${declId}/generate-xml`, null, {
+          responseType: 'blob',
+        }),
+    },
+  },
+  imports: {
+    list: (params?: any) => api.get('/integrations/imports', { params }),
+    upload: (sourceType: string, file: File, fiscalYearId?: number) => {
+      const formData = new FormData()
+      formData.append('source_type', sourceType)
+      formData.append('file', file)
+      if (fiscalYearId) formData.append('fiscal_year_id', fiscalYearId.toString())
+      return api.post('/integrations/imports/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    },
+    process: (importId: number, columnMapping?: any) =>
+      api.post(`/integrations/imports/${importId}/process`, { column_mapping: columnMapping }),
+    entries: (importId: number, params?: any) =>
+      api.get(`/integrations/imports/${importId}/entries`, { params }),
+  },
+  caseware: {
+    projects: {
+      list: (params?: any) => api.get('/integrations/caseware/projects', { params }),
+      create: (data: any) => api.post('/integrations/caseware/projects', data),
+      sync: (projectId: number, syncType: string = 'full') =>
+        api.post(`/integrations/caseware/projects/${projectId}/sync`, null, {
+          params: { sync_type: syncType }
+        }),
+    },
+  },
+  coda: {
+    list: (params?: any) => api.get('/integrations/coda', { params }),
+    upload: (file: File, bankAccountId?: number) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (bankAccountId) formData.append('bank_account_id', bankAccountId.toString())
+      return api.post('/integrations/coda/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    },
+    process: (importId: number) => api.post(`/integrations/coda/${importId}/process`),
+    movements: (importId: number, params?: any) =>
+      api.get(`/integrations/coda/${importId}/movements`, { params }),
+  },
+  importMappings: () => api.get('/integrations/import-mappings'),
+  codaCodes: () => api.get('/integrations/coda-codes'),
 }

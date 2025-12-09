@@ -95,14 +95,14 @@ export default function CRM() {
   const [opportunityForm, setOpportunityForm] = useState({
     name: '',
     client_id: '',
-    contact_name: '',
-    contact_email: '',
-    contact_phone: '',
+    prospect_contact: '',
+    prospect_email: '',
+    prospect_phone: '',
     estimated_value: 0,
     probability: 50,
-    expected_close_date: '',
+    estimated_close_date: '',
     source: '',
-    notes: '',
+    description: '',
   })
 
   const [taskForm, setTaskForm] = useState({
@@ -146,7 +146,7 @@ export default function CRM() {
       const [oppsRes, pipelineRes, tasksRes, activitiesRes] = await Promise.all([
         crmApi.opportunities.list(),
         crmApi.pipeline(),
-        crmApi.tasks.list({ status: 'EN_ATTENTE' }),
+        crmApi.tasks.list(),
         crmApi.activities.list(),
       ])
 
@@ -167,21 +167,21 @@ export default function CRM() {
       await crmApi.opportunities.create({
         ...opportunityForm,
         client_id: opportunityForm.client_id ? parseInt(opportunityForm.client_id) : null,
-        expected_close_date: opportunityForm.expected_close_date || null,
+        estimated_close_date: opportunityForm.estimated_close_date || null,
       })
       toast.success('Opportunite creee')
       setShowAddOpportunity(false)
       setOpportunityForm({
         name: '',
         client_id: '',
-        contact_name: '',
-        contact_email: '',
-        contact_phone: '',
+        prospect_contact: '',
+        prospect_email: '',
+        prospect_phone: '',
         estimated_value: 0,
         probability: 50,
-        expected_close_date: '',
+        estimated_close_date: '',
         source: '',
-        notes: '',
+        description: '',
       })
       loadData()
     } catch (error: any) {
@@ -601,8 +601,8 @@ export default function CRM() {
                   <label className="label">Nom du contact *</label>
                   <input
                     type="text"
-                    value={opportunityForm.contact_name}
-                    onChange={(e) => setOpportunityForm({ ...opportunityForm, contact_name: e.target.value })}
+                    value={opportunityForm.prospect_contact}
+                    onChange={(e) => setOpportunityForm({ ...opportunityForm, prospect_contact: e.target.value })}
                     className="input"
                     required
                   />
@@ -611,8 +611,8 @@ export default function CRM() {
                   <label className="label">Email</label>
                   <input
                     type="email"
-                    value={opportunityForm.contact_email}
-                    onChange={(e) => setOpportunityForm({ ...opportunityForm, contact_email: e.target.value })}
+                    value={opportunityForm.prospect_email}
+                    onChange={(e) => setOpportunityForm({ ...opportunityForm, prospect_email: e.target.value })}
                     className="input"
                   />
                 </div>
@@ -645,8 +645,8 @@ export default function CRM() {
                 <label className="label">Date de cloture prevue</label>
                 <input
                   type="date"
-                  value={opportunityForm.expected_close_date}
-                  onChange={(e) => setOpportunityForm({ ...opportunityForm, expected_close_date: e.target.value })}
+                  value={opportunityForm.estimated_close_date}
+                  onChange={(e) => setOpportunityForm({ ...opportunityForm, estimated_close_date: e.target.value })}
                   className="input"
                 />
               </div>
