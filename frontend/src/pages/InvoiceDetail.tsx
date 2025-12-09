@@ -50,6 +50,8 @@ export default function InvoiceDetail() {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
 
   useEffect(() => {
     loadInvoice()
@@ -96,12 +98,11 @@ export default function InvoiceDetail() {
   }
 
   const handleMarkPaid = async () => {
-    if (!confirm('Marquer cette facture comme payée ?')) return
-
     setActionLoading(true)
     try {
-      await invoicesApi.markPaid(Number(id))
-      toast.success('Facture marquée comme payée')
+      await invoicesApi.markPaid(Number(id), { payment_date: paymentDate })
+      toast.success('Facture marquée comme payée - PDF régénéré avec mention PAYÉ')
+      setShowPaymentModal(false)
       loadInvoice()
     } catch (error) {
       toast.error('Erreur')
@@ -210,7 +211,7 @@ export default function InvoiceDetail() {
           {invoice.status === 'sent' && (
             <>
               <button
-                onClick={handleMarkPaid}
+                onClick={() => setShowPaymentModal(true)}
                 disabled={actionLoading}
                 className="btn-primary flex items-center"
               >
@@ -328,6 +329,43 @@ export default function InvoiceDetail() {
           )}
         </div>
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Marquer comme payée</h3>
+            <div className="mb-4">
+              <label className="label">Date de paiement</label>
+              <input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="input"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Un nouveau PDF sera généré avec la mention "PAYÉ" et cette date.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="btn-secondary"
+                disabled={actionLoading}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleMarkPaid}
+                className="btn-primary"
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Traitement...' : 'Confirmer le paiement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

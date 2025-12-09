@@ -21,8 +21,8 @@ interface Article {
   id: number
   code: string
   name: string
-  unit_price: number
-  vat_rate: number
+  base_price: number
+  default_vat_rate: number
 }
 
 export default function QuoteForm() {
@@ -160,8 +160,14 @@ export default function QuoteForm() {
       const article = articles.find(a => a.id === parseInt(value))
       if (article) {
         newLines[index].description = article.name
-        newLines[index].unit_price_htva = article.unit_price || 0
-        newLines[index].vat_rate = article.vat_rate || 21
+        newLines[index].unit_price_htva = article.base_price || 0
+        newLines[index].vat_rate = article.default_vat_rate || 21
+        // Recalculate total
+        const qty = Number(newLines[index].quantity) || 1
+        const price = Number(article.base_price) || 0
+        const discount = Number(newLines[index].discount_percent) || 0
+        const subtotal = qty * price
+        newLines[index].total_htva = subtotal - (subtotal * discount / 100)
       }
     }
 

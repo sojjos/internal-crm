@@ -1,7 +1,7 @@
 """PDF generation service for invoices."""
 import os
-from datetime import datetime
-from typing import TYPE_CHECKING
+from datetime import datetime, date
+from typing import TYPE_CHECKING, Optional
 
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
@@ -17,12 +17,19 @@ if TYPE_CHECKING:
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
 
 
-def generate_invoice_pdf(invoice: "Invoice", company: "CompanySettings") -> str:
+def generate_invoice_pdf(
+    invoice: "Invoice",
+    company: "CompanySettings",
+    is_paid: bool = False,
+    payment_date: Optional[date] = None
+) -> str:
     """Generate PDF for an invoice.
 
     Args:
         invoice: Invoice model with lines and client loaded
         company: Company settings
+        is_paid: Whether to show PAID stamp
+        payment_date: Date of payment for the stamp
 
     Returns:
         Path to generated PDF file
@@ -38,6 +45,8 @@ def generate_invoice_pdf(invoice: "Invoice", company: "CompanySettings") -> str:
         "client": invoice.client,
         "lines": invoice.lines,
         "generated_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+        "is_paid": is_paid,
+        "payment_date": payment_date,
     }
 
     # Render HTML

@@ -19,14 +19,14 @@ interface Quote {
   client_name: string
   subject: string
   quote_date: string
-  valid_until: string
+  validity_date: string
   status: string
   total_htva: number
   total_vat: number
-  total_ttc: number
-  invoice_id: number | null
+  total_tvac: number
+  converted_to_invoice_id: number | null
   sent_at: string | null
-  client_accepted_at: string | null
+  accepted_at: string | null
 }
 
 const statusMap: Record<string, { label: string; color: string }> = {
@@ -134,10 +134,6 @@ export default function Quotes() {
     }
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('fr-BE')
-  }
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-BE', {
       style: 'currency',
@@ -145,11 +141,20 @@ export default function Quotes() {
     }).format(amount)
   }
 
-  const isExpiringSoon = (validUntil: string) => {
-    const expiry = new Date(validUntil)
+  const isExpiringSoon = (validityDate: string) => {
+    if (!validityDate) return false
+    const expiry = new Date(validityDate)
+    if (isNaN(expiry.getTime())) return false
     const today = new Date()
     const diff = (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     return diff <= 7 && diff > 0
+  }
+
+  const formatDateSafe = (dateStr: string) => {
+    if (!dateStr) return '-'
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return '-'
+    return date.toLocaleDateString('fr-BE')
   }
 
   // Summary stats
@@ -158,7 +163,7 @@ export default function Quotes() {
     pending: quotes.filter(q => q.status === 'ENVOYE').length,
     accepted: quotes.filter(q => q.status === 'ACCEPTE').length,
     totalValue: quotes.filter(q => ['ENVOYE', 'ACCEPTE'].includes(q.status))
-      .reduce((sum, q) => sum + q.total_ttc, 0),
+      .reduce((sum, q) => sum + (parseFloat(String(q.total_tvac)) || 0), 0),
   }
 
   if (loading && quotes.length === 0) {
@@ -260,11 +265,11 @@ export default function Quotes() {
                     <div className="max-w-xs truncate">{quote.subject}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {formatDate(quote.quote_date)}
+                    {formatDateSafe(quote.quote_date)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={isExpiringSoon(quote.valid_until) ? 'text-orange-600 font-medium' : ''}>
-                      {formatDate(quote.valid_until)}
+                    <span className={isExpiringSoon(quote.validity_date) ? 'text-orange-600 font-medium' : ''}>
+                      {formatDateSafe(quote.validity_date)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -275,7 +280,7 @@ export default function Quotes() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right font-semibold">
-                    {formatCurrency(quote.total_ttc)}
+                    {formatCurrency(parseFloat(String(quote.total_tvac)) || 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -320,7 +325,7 @@ export default function Quotes() {
                           </button>
                         </>
                       )}
-                      {quote.status === 'ACCEPTE' && !quote.invoice_id && (
+                      {quote.status === 'ACCEPTE' && !quote.converted_to_invoice_id && (
                         <button
                           onClick={() => handleConvert(quote.id)}
                           className="text-purple-600 hover:text-purple-800"
@@ -329,15 +334,15 @@ export default function Quotes() {
                           <DocumentDuplicateIcon className="h-5 w-5" />
                         </button>
                       )}
-                      {quote.invoice_id && (
+                      {quote.converted_to_invoice_id && (
                         <Link
-                          to={`/invoices/${quote.invoice_id}`}
+                          to={`/invoices/${quote.converted_to_invoice_id}`}
                           className="text-purple-600 hover:text-purple-800 text-sm"
                         >
                           Voir facture
                         </Link>
                       )}
-                      {!['BROUILLON'].includes(quote.status) && (
+                      {!['BROUILLON', 'CONVERTI'].includes(quote.status) && (
                         <Link
                           to={`/quotes/${quote.id}`}
                           className="text-gray-600 hover:text-gray-800"

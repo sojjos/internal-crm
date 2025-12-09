@@ -399,10 +399,13 @@ def convert_to_invoice(
         inv_line = InvoiceLine(
             invoice_id=invoice.id,
             description=quote_line.description,
-            quantity=quote_line.quantity,
-            unit_price_htva=quote_line.unit_price_htva,
-            vat_rate=quote_line.vat_rate,
-            discount_percent=quote_line.discount_percent
+            quantity=float(quote_line.quantity),
+            unit_price=float(quote_line.unit_price_htva),
+            vat_rate=float(quote_line.vat_rate),
+            discount_percent=float(quote_line.discount_percent),
+            line_total_htva=float(quote_line.total_htva),
+            line_total_vat=float(quote_line.total_vat),
+            line_total_tvac=float(quote_line.total_tvac)
         )
         db.add(inv_line)
         total_htva += quote_line.total_htva

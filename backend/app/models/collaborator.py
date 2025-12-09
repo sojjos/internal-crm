@@ -26,6 +26,10 @@ class Collaborator(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    # Link to user account (optional - if collaborator has system access)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, unique=True)
+    user = relationship("User", backref="collaborator", foreign_keys=[user_id])
+
     # Personal information
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
